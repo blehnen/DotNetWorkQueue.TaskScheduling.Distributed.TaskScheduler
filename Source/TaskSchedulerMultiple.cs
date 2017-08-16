@@ -1,6 +1,6 @@
 ﻿// ---------------------------------------------------------------------
 //This file is part of DotNetWorkQueue
-//Copyright © 2016 Brian Lehnen
+//Copyright © 2017 Brian Lehnen
 //
 //This library is free software; you can redistribute it and/or
 //modify it under the terms of the GNU Lesser General Public
@@ -66,7 +66,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// <value>
         /// The multiple configuration.
         /// </value>
-        public TaskSchedulerMultipleConfiguration MultipleConfiguration { get; private set; }
+        public TaskSchedulerMultipleConfiguration MultipleConfiguration { get; }
 
         /// <summary>
         /// Gets a value indicating whether [have room for task].
