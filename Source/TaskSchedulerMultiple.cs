@@ -95,7 +95,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// <summary>
         /// De-increments the counter.
         /// </summary>
-        protected override void DeincrementCounter()
+        protected override void DecrementCounter()
         {
             _jobCount.DecreaseCurrentTaskCount();
         }

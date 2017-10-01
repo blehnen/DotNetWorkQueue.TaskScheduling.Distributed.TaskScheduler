@@ -12,12 +12,14 @@ This module solves a very specific problem I have; I have a legacy system that f
 
 For instance, if there are 4 child processes running, each with their own scheduler:
 
-|Process | Current Worker Count | Max worker count
-| -----------------------------------------------|
-| Child A |1 | 8
-| Child B |3 | 8
-| Child C |4 | 8
-| Child D |3 | 10
+
+|Process		 	| Current Worker Count 	| Max worker count 	|
+| ------------- 	| ------------- 		|------------- 		|
+| Child A			|1 						| 8 				|
+| Child B 			|3 						| 8 				|
+| Child C 			|4 						| 8 				|
+| Child D 			|3 						| 10 				|
+
 
 The task scheduler will attempt to keep itself below not only it's own max worker count, but also the group as a whole. You can see that Child D can use up to 10 workers; however, it's only using 3 because the other three schedulers are using a combined total of 8 already. That does mean there are 11 workers running. Note that there is no hard limit set; we are simply limiting the conncurrency based on our current instance count, and the last known status of instances running on the same UDP port.
 
