@@ -1,17 +1,15 @@
-DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
+Distributed.TaskScheduler
 =========
 
 [![License LGPLv2.1](https://img.shields.io/badge/license-LGPLv2.1-green.svg)](http://www.gnu.org/licenses/lgpl-2.1.html)
 
 This module is a replacement task scheduler for the task scheduler built into [DotNetWorkQueue](https://github.com/blehnen/DotNetWorkQueue)
 
-It doesn't seem likly that anyone else would ever use this; however, I've added it to Github just in case. I have not published this on Nuget. I will if requested.
+It doesn't seem likely that anyone else would ever use this; however, I've added it to Github just in case. I have not published this on Nuget. I will if requested.
 
 This module solves a very specific problem I have; I have a legacy system that forks work into child processes when running. Some of these child processes need to run queued work. However, I want to have a soft limit on how many threads the entire collection can use as a group. This replacement task scheduler handles this, with some caveats.
 
-
 For instance, if there are 4 child processes running, each with their own scheduler:
-
 
 |Process		 	| Current Worker Count 	| Max worker count 	|
 | ------------- 	| ------------- 		|------------- 		|
@@ -68,7 +66,7 @@ private static void RegisterService(IContainer container)
 
 License
 --------
-Copyright � 2017 Brian Lehnen
+Copyright � 2019 Brian Lehnen
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -89,8 +87,6 @@ along with this program.  If not, see [http://www.gnu.org/licenses/](http://www.
 This library uses multiple 3rd party libaries, listed below.
 
 [**DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler**]
-
-* [ILMerge ](http://research.microsoft.com/en-us/people/mbarnett/ILMerge.aspx)
 
 * [DotNetWorkQueue ](https://github.com/blehnen/DotNetWorkQueue)
 
