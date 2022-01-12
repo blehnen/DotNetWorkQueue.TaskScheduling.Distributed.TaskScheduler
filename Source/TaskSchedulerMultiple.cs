@@ -19,6 +19,7 @@
 using System;
 using System.Threading.Tasks;
 using DotNetWorkQueue.Validation;
+using Microsoft.Extensions.Logging;
 
 namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
 {
@@ -38,8 +39,9 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// <param name="metrics">The metrics.</param>
         /// <param name="jobCounter">The job counter.</param>
         /// <param name="multipleConfiguration">The multiple configuration.</param>
+        /// <param name="log">The logger.</param>
         public TaskSchedulerMultiple(ITaskSchedulerConfiguration configuration, IWaitForEventOrCancelThreadPool waitForFreeThread, IMetrics metrics,
-            ITaskSchedulerJobCountSync jobCounter, TaskSchedulerMultipleConfiguration multipleConfiguration) : base(configuration, waitForFreeThread, metrics)
+            ITaskSchedulerJobCountSync jobCounter, TaskSchedulerMultipleConfiguration multipleConfiguration, ILogger log) : base(configuration, waitForFreeThread, metrics, log)
         {
             Guard.NotNull(() => jobCounter, jobCounter);
             Guard.NotNull(() => multipleConfiguration, multipleConfiguration);

@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DotNetWorkQueue.Logging;
+using Microsoft.Extensions.Logging;
 using NetMQ;
 using NetMQ.Sockets;
 
@@ -41,16 +42,16 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         private PairSocket _shim;
         private readonly Dictionary<NodeKey, DateTime> _nodes; 
         private int _randomPort;
-        private readonly ILog _log;
+        private readonly ILogger _log;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskSchedulerBus" /> class.
         /// </summary>
-        /// <param name="logFactory">The log factory.</param>
+        /// <param name="log">The logger.</param>
         /// <param name="configuration">The configuration.</param>
-        public TaskSchedulerBus(ILogFactory logFactory, TaskSchedulerMultipleConfiguration configuration)
+        public TaskSchedulerBus(ILogger log, TaskSchedulerMultipleConfiguration configuration)
         {
-            _log = logFactory.Create();
+            _log = log;
             _nodes = new Dictionary<NodeKey, DateTime>();
             _broadcastPort = configuration.BroadCastPort;
         }
@@ -87,21 +88,21 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 // we bind to a random port, we will later publish this port
                 // using the beacon
                 _randomPort = _subscriber.BindRandomPort("tcp://*");
-                _log.Debug(() => $"Bus subscriber is bound to {_subscriber.Options.LastEndpoint}");
+                _log.LogDebug($"Bus subscriber is bound to {_subscriber.Options.LastEndpoint}");
 
                 // listen to incoming messages from other publishers, forward them to the shim
                 _subscriber.ReceiveReady += OnSubscriberReady;
 
                 // configure the beacon to listen on the broadcast port
-                _log.Debug(() => $"Beacon is being configured to UDP port {_broadcastPort}");
+                _log.LogDebug($"Beacon is being configured to UDP port {_broadcastPort}");
                 _beacon.Configure(_broadcastPort, "loopback");
 
                 // publishing the random port to all other nodes
-                _log.Debug(() => $"Beacon is publishing the Bus subscriber port {_randomPort}");
+                _log.LogDebug($"Beacon is publishing the Bus subscriber port {_randomPort}");
                 _beacon.Publish(_randomPort.ToString(), TimeSpan.FromSeconds(1));
 
                 // Subscribe to all beacon on the port
-                _log.Debug(() => $"Beacon is subscribing to all beacons on UDP port {_broadcastPort}");
+                _log.LogDebug( $"Beacon is subscribing to all beacons on UDP port {_broadcastPort}");
                 _beacon.Subscribe("");
 
                 // listen to incoming beacons
