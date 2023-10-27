@@ -38,7 +38,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Aq.ExpressionJsonSerializer, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\DotNetWorkQueue.0.6.8\lib\net472\Aq.ExpressionJsonSerializer.dll</HintPath>
+      <HintPath>packages\DotNetWorkQueue.0.7.0\lib\net472\Aq.ExpressionJsonSerializer.dll</HintPath>
     </Reference>
     <Reference Include="AsyncIO, Version=0.1.69.0, Culture=neutral, PublicKeyToken=44a94435bd6f33f8, processorArchitecture=MSIL">
       <HintPath>packages\AsyncIO.0.1.69\lib\net40\AsyncIO.dll</HintPath>
@@ -49,11 +49,11 @@
     <Reference Include="CacheManager.SystemRuntimeCaching, Version=1.2.0.0, Culture=neutral, PublicKeyToken=5b450b4fb65c4cdb, processorArchitecture=MSIL">
       <HintPath>packages\CacheManager.SystemRuntimeCaching.1.2.0\lib\net45\CacheManager.SystemRuntimeCaching.dll</HintPath>
     </Reference>
-    <Reference Include="DotNetWorkQueue, Version=0.6.8.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\DotNetWorkQueue.0.6.8\lib\net472\DotNetWorkQueue.dll</HintPath>
+    <Reference Include="DotNetWorkQueue, Version=0.7.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\DotNetWorkQueue.0.7.0\lib\net472\DotNetWorkQueue.dll</HintPath>
     </Reference>
     <Reference Include="JpLabs.DynamicCode, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\DotNetWorkQueue.0.6.8\lib\net472\JpLabs.DynamicCode.dll</HintPath>
+      <HintPath>packages\DotNetWorkQueue.0.7.0\lib\net472\JpLabs.DynamicCode.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=7.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Bcl.AsyncInterfaces.7.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
@@ -70,8 +70,8 @@
     <Reference Include="Microsoft.Extensions.Configuration.Abstractions, Version=7.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Extensions.Configuration.Abstractions.7.0.0\lib\net462\Microsoft.Extensions.Configuration.Abstractions.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration.Binder, Version=7.0.0.3, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Extensions.Configuration.Binder.7.0.3\lib\net462\Microsoft.Extensions.Configuration.Binder.dll</HintPath>
+    <Reference Include="Microsoft.Extensions.Configuration.Binder, Version=7.0.0.4, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Extensions.Configuration.Binder.7.0.4\lib\net462\Microsoft.Extensions.Configuration.Binder.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Extensions.DependencyInjection, Version=7.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Extensions.DependencyInjection.7.0.0\lib\net462\Microsoft.Extensions.DependencyInjection.dll</HintPath>
@@ -82,8 +82,8 @@
     <Reference Include="Microsoft.Extensions.Logging, Version=7.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Extensions.Logging.7.0.0\lib\net462\Microsoft.Extensions.Logging.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Extensions.Logging.Abstractions, Version=7.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Extensions.Logging.Abstractions.7.0.0\lib\net462\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions, Version=7.0.0.1, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Extensions.Logging.Abstractions.7.0.1\lib\net462\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Extensions.Logging.Configuration, Version=7.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Extensions.Logging.Configuration.7.0.0\lib\net462\Microsoft.Extensions.Logging.Configuration.dll</HintPath>
@@ -103,32 +103,35 @@
     <Reference Include="NaCl, Version=0.1.13.0, Culture=neutral, PublicKeyToken=827c20e50a9775fa, processorArchitecture=MSIL">
       <HintPath>packages\NaCl.Net.0.1.13\lib\net472\NaCl.dll</HintPath>
     </Reference>
-    <Reference Include="NetMQ, Version=4.0.1.10, Culture=neutral, PublicKeyToken=a6decef4ddc58b3a, processorArchitecture=MSIL">
-      <HintPath>packages\NetMQ.4.0.1.10\lib\net47\NetMQ.dll</HintPath>
+    <Reference Include="NetMQ, Version=4.0.1.13, Culture=neutral, PublicKeyToken=a6decef4ddc58b3a, processorArchitecture=MSIL">
+      <HintPath>packages\NetMQ.4.0.1.13\lib\net47\NetMQ.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>packages\Newtonsoft.Json.13.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="OpenTelemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
-      <HintPath>packages\OpenTelemetry.1.4.0\lib\net462\OpenTelemetry.dll</HintPath>
+      <HintPath>packages\OpenTelemetry.1.6.0\lib\net462\OpenTelemetry.dll</HintPath>
     </Reference>
     <Reference Include="OpenTelemetry.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
-      <HintPath>packages\OpenTelemetry.Api.1.4.0\lib\net462\OpenTelemetry.Api.dll</HintPath>
+      <HintPath>packages\OpenTelemetry.Api.1.6.0\lib\net462\OpenTelemetry.Api.dll</HintPath>
     </Reference>
     <Reference Include="OpenTelemetry.Api.ProviderBuilderExtensions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
-      <HintPath>packages\OpenTelemetry.Api.ProviderBuilderExtensions.1.4.0\lib\net462\OpenTelemetry.Api.ProviderBuilderExtensions.dll</HintPath>
+      <HintPath>packages\OpenTelemetry.Api.ProviderBuilderExtensions.1.6.0\lib\net462\OpenTelemetry.Api.ProviderBuilderExtensions.dll</HintPath>
     </Reference>
     <Reference Include="OpenTracing, Version=0.12.1.0, Culture=neutral, PublicKeyToken=61503406977abdaf, processorArchitecture=MSIL">
       <HintPath>packages\OpenTracing.0.12.1\lib\net45\OpenTracing.dll</HintPath>
     </Reference>
-    <Reference Include="Polly, Version=7.0.0.0, Culture=neutral, PublicKeyToken=c8a3ffc3f8f825cc, processorArchitecture=MSIL">
-      <HintPath>packages\Polly.7.2.3\lib\net472\Polly.dll</HintPath>
+    <Reference Include="Polly, Version=8.0.0.0, Culture=neutral, PublicKeyToken=c8a3ffc3f8f825cc, processorArchitecture=MSIL">
+      <HintPath>packages\Polly.8.0.0\lib\net472\Polly.dll</HintPath>
     </Reference>
     <Reference Include="Polly.Caching.Memory, Version=3.0.0.0, Culture=neutral, PublicKeyToken=c8a3ffc3f8f825cc, processorArchitecture=MSIL">
       <HintPath>packages\Polly.Caching.Memory.3.0.2\lib\netstandard2.0\Polly.Caching.Memory.dll</HintPath>
     </Reference>
+    <Reference Include="Polly.Core, Version=8.0.0.0, Culture=neutral, PublicKeyToken=c8a3ffc3f8f825cc, processorArchitecture=MSIL">
+      <HintPath>packages\Polly.Core.8.0.0\lib\net472\Polly.Core.dll</HintPath>
+    </Reference>
     <Reference Include="Schyntax, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\DotNetWorkQueue.0.6.8\lib\net472\Schyntax.dll</HintPath>
+      <HintPath>packages\DotNetWorkQueue.0.7.0\lib\net472\Schyntax.dll</HintPath>
     </Reference>
     <Reference Include="SimpleInjector, Version=5.0.0.0, Culture=neutral, PublicKeyToken=984cb50dea722e99, processorArchitecture=MSIL">
       <HintPath>packages\SimpleInjector.5.4.1\lib\net461\SimpleInjector.dll</HintPath>
@@ -146,8 +149,8 @@
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Diagnostics.DiagnosticSource, Version=7.0.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>packages\System.Diagnostics.DiagnosticSource.7.0.1\lib\net462\System.Diagnostics.DiagnosticSource.dll</HintPath>
+    <Reference Include="System.Diagnostics.DiagnosticSource, Version=7.0.0.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Diagnostics.DiagnosticSource.7.0.2\lib\net462\System.Diagnostics.DiagnosticSource.dll</HintPath>
     </Reference>
     <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
