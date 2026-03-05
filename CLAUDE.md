@@ -53,6 +53,12 @@ All source is in `Source/` under the single namespace `DotNetWorkQueue.TaskSched
 4. Task count changes are published as multi-frame NetMQ messages (SetCount command with port + count)
 5. Each node maintains a dictionary of peer counts; `GetCurrentTaskCount()` returns local + sum of all peer counts
 
+### Known Issues
+
+- **`_stopRequested`/`_running` not volatile** in `TaskSchedulerJobCountSync` — read/written across threads without memory barriers. Works on x86 but is technically a data race.
+- **No error handling on `int.Parse` in `TaskSchedulerBus.OnBeaconReady`** — a malformed beacon would crash the poller.
+- **Lock contention in `ProcessMessages`** — `_lockSocket` is held during `TryReceiveFrameString` (10ms timeout), which contends with `Increase/DecreaseCurrentTaskCount` on the same lock.
+
 ### Key Dependencies
 
 - **DotNetWorkQueue** — provides `ATaskScheduler`, `SmartThreadPoolTaskScheduler`, `IContainer`, `ITaskSchedulerConfiguration`
