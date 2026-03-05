@@ -1,0 +1,17 @@
+version: 0.2.0.{build}
+skip_tags: true
+skip_branch_with_pr: true
+image: Visual Studio 2022
+install:
+- ps: |
+    Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -UseBasicParsing -OutFile "$env:temp\dotnet-install.ps1"
+    & $env:temp\dotnet-install.ps1 -Architecture x64 -Channel 10.0 -Quality ga -InstallDir "$env:ProgramFiles\dotnet"
+    $env:PATH = "$env:ProgramFiles\dotnet;$env:PATH"
+    [Environment]::SetEnvironmentVariable('PATH', $env:PATH, 'Process')
+before_build:
+- cmd: dotnet --version
+- appveyor-retry dotnet restore "Source\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln"
+build_script:
+- dotnet build "Source\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln" -c Debug
+test_script:
+- dotnet test "Source\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests.csproj"
