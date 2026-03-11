@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Display .NET version
+        run: dotnet --version
+
+      - name: Restore
+        run: dotnet restore "Source\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln"
+
+      - name: Build
+        run: dotnet build "Source\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln" -c Debug --no-restore
+
+      - name: Test
+        run: dotnet test "Source\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests.csproj" --no-build

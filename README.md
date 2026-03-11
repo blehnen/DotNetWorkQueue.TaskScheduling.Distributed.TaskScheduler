@@ -1,7 +1,7 @@
 # Distributed.TaskScheduler
 
 [![License LGPLv2.1](https://img.shields.io/badge/license-LGPLv2.1-green.svg)](http://www.gnu.org/licenses/lgpl-2.1.html)
-[![Build status](https://ci.appveyor.com/api/projects/status/p6nov0fd9axwsdh8/branch/master?svg=true)](https://ci.appveyor.com/project/blehnen/dotnetworkqueue-taskscheduling-distributed-tasksch/branch/master)
+[![Build status](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/actions/workflows/ci.yml)
 
 A replacement task scheduler for [DotNetWorkQueue](https://github.com/blehnen/DotNetWorkQueue) that throttles worker thread pools across multiple processes on the same machine using UDP peer discovery.
 
