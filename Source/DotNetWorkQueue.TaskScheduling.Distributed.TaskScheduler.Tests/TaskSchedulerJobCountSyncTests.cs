@@ -45,6 +45,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
         }
 
         [Fact]
+        [Trait("Category", "FlakyOnLinux")]
         public async Task TwoNodesDiscoverEachOtherAndSyncCounts()
         {
             var port = NextPort();
