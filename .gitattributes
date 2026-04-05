@@ -1,0 +1,17 @@
+# Normalize line endings across Windows/Linux/macOS.
+# Repo standard is LF — files are stored and checked out as LF on all platforms
+# so edits from WSL, Linux, or Windows (with or without core.autocrlf) don't drift.
+
+* text=auto eol=lf
+
+# Binary files — never touch
+*.dll    binary
+*.exe    binary
+*.pdb    binary
+*.snk    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.zip    binary

@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,13 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
         private static int _nextPort = 40000 + Random.Shared.Next(0, 10000);
         private static int NextPort() => Interlocked.Increment(ref _nextPort);
 
+        // On Linux, NetMQBeacon's "loopback" mode binds to 127.0.0.1 but sends to 255.255.255.255,
+        // and the kernel will not deliver those broadcasts back to a 127.0.0.1 socket. Use the
+        // first available interface instead, which binds to the subnet broadcast address and works
+        // for same-host peer discovery on both platforms.
+        private static readonly string BeaconInterface =
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "" : "loopback";
+
         private readonly ILogger _logger;
 
         public TaskSchedulerJobCountSyncTests(ITestOutputHelper output)
@@ -25,7 +33,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
         public async Task LocalCountIncrementAndDecrement()
         {
             var port = NextPort();
-            var config = new TaskSchedulerMultipleConfiguration(port);
+            var config = new TaskSchedulerMultipleConfiguration(port, BeaconInterface);
             var bus = new TaskSchedulerBus(_logger, config);
             using var sync = new TaskSchedulerJobCountSync(bus, _logger);
 
@@ -45,16 +53,15 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnLinux")]
         public async Task TwoNodesDiscoverEachOtherAndSyncCounts()
         {
             var port = NextPort();
 
-            var config1 = new TaskSchedulerMultipleConfiguration(port);
+            var config1 = new TaskSchedulerMultipleConfiguration(port, BeaconInterface);
             var bus1 = new TaskSchedulerBus(_logger, config1);
             var sync1 = new TaskSchedulerJobCountSync(bus1, _logger);
 
-            var config2 = new TaskSchedulerMultipleConfiguration(port);
+            var config2 = new TaskSchedulerMultipleConfiguration(port, BeaconInterface);
             var bus2 = new TaskSchedulerBus(_logger, config2);
             var sync2 = new TaskSchedulerJobCountSync(bus2, _logger);
 
@@ -93,7 +100,6 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
         }
 
         [Fact]
-        [Trait("Category", "FlakyOnLinux")]
         public async Task ThreeNodesAllSeeSharedCount()
         {
             var port = NextPort();
@@ -101,7 +107,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
             var syncs = new TaskSchedulerJobCountSync[3];
             for (var i = 0; i < 3; i++)
             {
-                var config = new TaskSchedulerMultipleConfiguration(port);
+                var config = new TaskSchedulerMultipleConfiguration(port, BeaconInterface);
                 var bus = new TaskSchedulerBus(_logger, config);
                 syncs[i] = new TaskSchedulerJobCountSync(bus, _logger);
             }
