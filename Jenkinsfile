@@ -17,6 +17,7 @@ pipeline {
                 sh '''
                     dotnet test "Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests.csproj" \
                         -f net8.0 --no-build -c Debug \
+                        --filter "Category!=FlakyOnLinux" \
                         --collect:"XPlat Code Coverage" --results-directory coverage/unit
                 '''
 

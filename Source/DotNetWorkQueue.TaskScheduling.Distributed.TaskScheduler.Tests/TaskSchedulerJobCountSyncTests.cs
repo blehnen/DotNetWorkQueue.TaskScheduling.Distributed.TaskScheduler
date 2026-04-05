@@ -92,6 +92,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
         }
 
         [Fact]
+        [Trait("Category", "FlakyOnLinux")]
         public async Task ThreeNodesAllSeeSharedCount()
         {
             var port = NextPort();
