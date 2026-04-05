@@ -29,11 +29,11 @@ Child D can use up to 10 workers, but it's only using 3 because the other three 
 
 ## Limitations
 
-- **Loose throttling** — may temporarily exceed desired thread count depending on timing
-- **No work group support** — work groups function but aren't throttled between schedulers, only within the same instance
-- **Same machine only** — relies on UDP broadcast, which most cloud providers disable
-- **Worker spikes on new nodes** — usage may spike until a new node syncs with existing nodes
-- **Best with similar limits** — if one scheduler has a max of 20 but others have a max of 2, the smaller schedulers risk being starved
+- Throttling is loose; you may temporarily exceed the desired thread count depending on timing
+- Work groups still function but aren't throttled between schedulers, only within the same instance
+- Same machine only. Relies on UDP broadcast, which most cloud providers disable
+- Worker count may spike on a new node until it syncs with existing peers
+- Works best when scheduler max values are similar. If one is 20 and others are 2, the small ones can get starved
 
 ## Usage
 

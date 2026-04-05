@@ -2,12 +2,12 @@
 
 ### 0.2.1 2026-04-05
 
-* Fix: beacon interface is now configurable via `BeaconInterface` on `TaskSchedulerMultipleConfiguration` (also exposed via `InjectDistributedTaskScheduler`). Default `"loopback"` preserves prior Windows behavior; pass `""` on Linux where NetMQ's `"loopback"` mode does not deliver broadcasts back to sibling sockets
-* Fix: guard against empty `NetMQBeacon.HostName` to avoid URI-parse crash when reverse DNS fails (common on CI hosts and WSL)
-* Update DotNetWorkQueue reference from 0.9.0 to 0.9.14
-* Add Jenkins pipeline (`Jenkinsfile`) with XPlat code coverage collection and Codecov upload
-* Add `coverlet.collector` to test project
-* Add `.gitattributes` to normalize line endings across Windows/Linux/macOS
+* Add `BeaconInterface` to `TaskSchedulerMultipleConfiguration` and `InjectDistributedTaskScheduler` (default `"loopback"`). Pass `""` on Linux — NetMQ's `"loopback"` mode binds to 127.0.0.1 but sends to 255.255.255.255, which Linux won't loop back to a loopback-bound socket, so discovery silently fails
+* Fall back to `127.0.0.1` in `GetHostAddress` when `NetMQBeacon.HostName` is empty (reverse DNS failure on CI/WSL crashed URI parsing)
+* Bump DotNetWorkQueue from 0.9.0 to 0.9.14
+* Add Jenkinsfile with XPlat code coverage and Codecov upload
+* Add `coverlet.collector` to the test project
+* Add `.gitattributes` to stop line-ending drift between Windows and WSL edits
 
 ### 0.2.0 2026-03-05
 
