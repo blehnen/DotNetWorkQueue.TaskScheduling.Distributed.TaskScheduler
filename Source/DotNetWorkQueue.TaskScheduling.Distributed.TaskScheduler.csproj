@@ -6,7 +6,7 @@
     <AssemblyName>DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <Company>Brian Lehnen</Company>
     <Copyright>Copyright © Brian Lehnen 2019-2026</Copyright>
     <Product>DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler</Product>
