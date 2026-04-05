@@ -28,14 +28,20 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// </summary>
         /// <param name="container">The container.</param>
         /// <param name="broadCastPort">The broad cast port to use.</param>
+        /// <param name="beaconInterface">
+        /// The interface the UDP beacon should bind to. Defaults to <c>"loopback"</c>. See
+        /// <see cref="TaskSchedulerMultipleConfiguration(int, string)"/> for valid values. On Linux,
+        /// <c>"loopback"</c> does not deliver broadcasts back to sibling processes — use <c>""</c> to
+        /// bind to the first available interface instead.
+        /// </param>
         /// <remarks>Each scheduler that shares a port will attempt to limit threads by the shared pool</remarks>
-        public static void InjectDistributedTaskScheduler(this IContainer container, int broadCastPort = 9999)
+        public static void InjectDistributedTaskScheduler(this IContainer container, int broadCastPort = 9999, string beaconInterface = "loopback")
         {
             container.Register<ITaskSchedulerBus, TaskSchedulerBus>(LifeStyles.Singleton);
             container.Register<ITaskSchedulerJobCountSync, TaskSchedulerJobCountSync>(LifeStyles.Singleton);
             container.Register<ATaskScheduler, TaskSchedulerMultiple>(LifeStyles.Singleton);
 
-            var configuration = new TaskSchedulerMultipleConfiguration(broadCastPort);
+            var configuration = new TaskSchedulerMultipleConfiguration(broadCastPort, beaconInterface);
             container.Register(() => configuration, LifeStyles.Singleton);
         }
     }

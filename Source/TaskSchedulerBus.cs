@@ -34,6 +34,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         // Dead nodes timeout
         private readonly TimeSpan _deadNodeTimeout = TimeSpan.FromSeconds(10);
         private readonly int _broadcastPort;
+        private readonly string _beaconInterface;
         private NetMQActor _actor;
         private PublisherSocket _publisher;
         private SubscriberSocket _subscriber;
@@ -54,6 +55,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             _log = log;
             _nodes = new Dictionary<NodeKey, DateTime>();
             _broadcastPort = configuration.BroadCastPort;
+            _beaconInterface = configuration.BeaconInterface;
         }
 
         /// <summary>
@@ -94,8 +96,8 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 _subscriber.ReceiveReady += OnSubscriberReady;
 
                 // configure the beacon to listen on the broadcast port
-                _log.LogDebug($"Beacon is being configured to UDP port {_broadcastPort}");
-                _beacon.Configure(_broadcastPort, "loopback");
+                _log.LogDebug($"Beacon is being configured to UDP port {_broadcastPort} on interface '{_beaconInterface}'");
+                _beacon.Configure(_broadcastPort, _beaconInterface);
 
                 // publishing the random port to all other nodes
                 _log.LogDebug($"Beacon is publishing the Bus subscriber port {_randomPort}");
@@ -144,7 +146,16 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             }
             else if (command == TaskSchedulerBusCommands.GetHostAddress.ToString())
             {
-                var address = _beacon.HostName + ":" + _randomPort;
+                // NetMQBeacon.HostName returns empty string when the beacon is bound to all
+                // interfaces or when its reverse DNS lookup fails (common on CI hosts without
+                // DNS, and in WSL). The host portion of _hostAddress is informational — the
+                // port is what matters downstream — but it still has to parse as a valid URI.
+                var hostName = _beacon.HostName;
+                if (string.IsNullOrEmpty(hostName))
+                {
+                    hostName = "127.0.0.1";
+                }
+                var address = hostName + ":" + _randomPort;
                 _shim.SendFrame(address);
             }
         }
