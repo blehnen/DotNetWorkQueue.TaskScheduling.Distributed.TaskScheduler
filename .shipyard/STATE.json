@@ -1,0 +1,7 @@
+{
+  "phase": "shipped",
+  "position": "v0.3.0 shipped to nuget.org",
+  "status": "shipped",
+  "message": "Release 0.3.0 committed (a392e62), tagged v0.3.0, pushed to origin. CI publish job succeeded. Package live on nuget.org.",
+  "updated_at": "2026-04-10T22:10:00Z"
+}

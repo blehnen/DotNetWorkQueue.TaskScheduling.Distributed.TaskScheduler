@@ -1,0 +1,26 @@
+{
+  "version": "1.3",
+  "created_at": "2026-04-10T00:00:00Z",
+  "interaction_mode": "interactive",
+  "git_strategy": "manual",
+  "review_depth": "detailed",
+  "security_audit": true,
+  "simplification_review": true,
+  "iac_validation": "auto",
+  "documentation_generation": true,
+  "plan_critique": true,
+  "codebase_docs_path": ".shipyard/codebase",
+  "context_tier": "auto",
+  "model_routing": {
+    "architect": "opus",
+    "debugger": "opus",
+    "researcher": "sonnet",
+    "builder": "sonnet",
+    "reviewer": "sonnet",
+    "auditor": "sonnet",
+    "simplifier": "sonnet",
+    "documenter": "sonnet",
+    "mapper": "sonnet",
+    "verifier": "haiku"
+  }
+}
