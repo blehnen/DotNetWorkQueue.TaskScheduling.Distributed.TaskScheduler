@@ -33,8 +33,8 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
     /// </summary>
     public class TaskSchedulerJobCountSync: ITaskSchedulerJobCountSync
     {
-        private bool _stopRequested;
-        private bool _running;
+        private volatile bool _stopRequested;
+        private volatile bool _running;
         private long _currentTaskCount;
         private readonly object _lockSocket = new object();
         private readonly ConcurrentDictionary<int, long> _otherProcessorCounts;
@@ -207,8 +207,14 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 }
                 else if (message == TaskSchedulerBusCommands.SetCount.ToString())
                 {
-                    var key = int.Parse(_actor.ReceiveFrameString());
-                    var value = long.Parse(_actor.ReceiveFrameString());
+                    if (!int.TryParse(_actor.ReceiveFrameString(), out var key))
+                    {
+                        return;
+                    }
+                    if (!long.TryParse(_actor.ReceiveFrameString(), out var value))
+                    {
+                        return;
+                    }
                     if (!_otherProcessorCounts.ContainsKey(key))
                     {
                         _otherProcessorCounts.TryAdd(key, value);

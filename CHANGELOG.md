@@ -1,5 +1,17 @@
 # Changelog
 
+### 0.3.0 2026-04-10
+
+* **Breaking:** Drop `net48` and `net472` target frameworks; main library now targets `net10.0` and `net8.0` only (matches upstream DotNetWorkQueue 0.9.19+ which also dropped .NET Framework support)
+* Bump `DotNetWorkQueue` from 0.9.14 to 0.9.31 (no API-breakage in the `ATaskScheduler`/`SmartThreadPoolTaskScheduler` surface we consume)
+* Fix: replace `int.Parse` / `long.Parse` with `TryParse` guards in both `TaskSchedulerBus.OnBeaconReady` and `TaskSchedulerJobCountSync.ProcessMessages`; malformed UDP beacons and malformed `SetCount` frames are now silently dropped rather than crashing the NetMQ poller or throwing inside the message lock
+* Fix: `TaskSchedulerJobCountSync._stopRequested` and `_running` fields are now `volatile`, ensuring correct cross-thread visibility of the stop signal on non-x86 hardware
+* First public NuGet release as `DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler` on nuget.org
+* Add NuGet packaging metadata, SourceLink (`Microsoft.SourceLink.GitHub` 10.0.201), deterministic builds, `.snupkg` symbol packages
+* Add new README.md targeted at NuGet consumers, packed into the NuGet package
+* Add `publish` job to GitHub Actions workflow, tag-triggered on `v*` tags, pushes `.nupkg` + `.snupkg` to nuget.org
+* Deferred: lock contention in `TaskSchedulerJobCountSync.ProcessMessages` remains a known issue; see [issue #6](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/issues/6)
+
 ### 0.2.1 2026-04-05
 
 * Add `BeaconInterface` to `TaskSchedulerMultipleConfiguration` and `InjectDistributedTaskScheduler` (default `"loopback"`). Pass `""` on Linux — NetMQ's `"loopback"` mode binds to 127.0.0.1 but sends to 255.255.255.255, which Linux won't loop back to a loopback-bound socket, so discovery silently fails

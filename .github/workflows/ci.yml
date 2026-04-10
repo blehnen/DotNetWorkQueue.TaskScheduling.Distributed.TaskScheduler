@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [master]
+    tags: [ 'v*' ]
   pull_request:
     branches: [master]
 
@@ -31,3 +32,32 @@ jobs:
 
       - name: Test
         run: dotnet test "Source\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests.csproj" --no-build
+
+  publish:
+    name: Publish to NuGet
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln
+
+      - name: Pack
+        run: dotnet pack Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.csproj -c Release --no-restore
+
+      - name: Push nupkg to NuGet
+        run: dotnet nuget push "Source/bin/Release/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Push snupkg to NuGet
+        run: dotnet nuget push "Source/bin/Release/*.snupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

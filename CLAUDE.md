@@ -10,7 +10,7 @@ License: LGPLv2.1. All source files include a license header block.
 
 ## Build
 
-SDK-style project multi-targeting `net10.0`, `net8.0`, `net48`, and `net472`. Solution file is at `Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln`.
+SDK-style project targeting `net10.0` and `net8.0`. Solution file is at `Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln`.
 
 ```bash
 dotnet restore Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln
@@ -25,7 +25,7 @@ Integration tests use xUnit and target net8.0. Tests involve real UDP beacon dis
 dotnet test Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests.csproj
 ```
 
-Build settings: warnings are treated as errors (`TreatWarningsAsErrors`), and XML documentation is generated in both Debug and Release. CI runs on AppVeyor.
+Build settings: warnings are treated as errors (`TreatWarningsAsErrors`), and XML documentation is generated in both Debug and Release. CI runs on GitHub Actions (`.github/workflows/ci.yml`).
 
 ## Architecture
 
@@ -55,9 +55,7 @@ All source is in `Source/` under the single namespace `DotNetWorkQueue.TaskSched
 
 ### Known Issues
 
-- **`_stopRequested`/`_running` not volatile** in `TaskSchedulerJobCountSync` — read/written across threads without memory barriers. Works on x86 but is technically a data race.
-- **No error handling on `int.Parse` in `TaskSchedulerBus.OnBeaconReady`** — a malformed beacon would crash the poller.
-- **Lock contention in `ProcessMessages`** — `_lockSocket` is held during `TryReceiveFrameString` (10ms timeout), which contends with `Increase/DecreaseCurrentTaskCount` on the same lock.
+- **Lock contention in `ProcessMessages`** in `TaskSchedulerJobCountSync` — `_lockSocket` is held during `TryReceiveFrameString` (10ms timeout) and contends with `IncreaseCurrentTaskCount`/`DecreaseCurrentTaskCount` on every task dispatch. Tracked for a future release as [issue #6](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/issues/6).
 
 ### Key Dependencies
 

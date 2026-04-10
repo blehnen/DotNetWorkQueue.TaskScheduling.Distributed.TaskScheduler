@@ -173,7 +173,10 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             // we got another beacon
             // let's check if we already know about the beacon
             var message = _beacon.Receive();
-            var port = int.Parse(message.String);
+            if (!int.TryParse(message.String, out var port))
+            {
+                return;
+            }
             var node = new NodeKey(message.PeerHost, port);
 
             // check if node already exist

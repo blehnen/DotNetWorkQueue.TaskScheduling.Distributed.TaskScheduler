@@ -1,15 +1,30 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-     <TargetFrameworks>net10.0;net8.0;net48;net472;</TargetFrameworks>
+     <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
     <RootNamespace>DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler</RootNamespace>
     <AssemblyName>DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.2.1</Version>
+    <Version>0.3.0</Version>
     <Company>Brian Lehnen</Company>
     <Copyright>Copyright © Brian Lehnen 2019-2026</Copyright>
     <Product>DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler</Product>
+    <PackageId>DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler</PackageId>
+    <Authors>Brian Lehnen</Authors>
+    <Description>Distributed task scheduler for DotNetWorkQueue that coordinates worker thread pool counts across multiple processes on a single machine via NetMQ P2P messaging and UDP beacon discovery. Each scheduler instance throttles the combined local + remote concurrency below a configured maximum.</Description>
+    <PackageLicenseExpression>LGPL-2.1-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <NoWarn>CS1591</NoWarn>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,8 +33,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNetWorkQueue" Version="0.9.14" />
+    <PackageReference Include="DotNetWorkQueue" Version="0.9.31" />
     <PackageReference Include="NetMQ" Version="4.0.2.2" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.201" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

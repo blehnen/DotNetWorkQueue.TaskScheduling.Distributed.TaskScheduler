@@ -1,82 +1,109 @@
-# Distributed.TaskScheduler
+# DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
 
-[![License LGPLv2.1](https://img.shields.io/badge/license-LGPLv2.1-green.svg)](http://www.gnu.org/licenses/lgpl-2.1.html)
+[![NuGet](https://img.shields.io/nuget/v/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.svg)](https://www.nuget.org/packages/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler)
+[![License](https://img.shields.io/badge/license-LGPL--2.1--or--later-blue.svg)](LICENSE)
 [![Build status](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/actions/workflows/ci.yml)
 
-A replacement task scheduler for [DotNetWorkQueue](https://github.com/blehnen/DotNetWorkQueue) that throttles worker thread pools across multiple processes on the same machine using UDP peer discovery.
+A replacement `ATaskScheduler` for [DotNetWorkQueue](https://github.com/blehnen/DotNetWorkQueue) that coordinates worker thread pool counts across multiple processes on the same machine via a NetMQ P2P bus.
 
-## Overview
+## When to use it
 
-This module solves a specific problem: a legacy system that forks work into child processes, where each child process runs queued work via its own scheduler. The goal is to have a **soft limit** on how many threads the entire collection uses as a group.
+If you run several DotNetWorkQueue consumer processes on a single machine, each process manages its own thread pool and has no awareness of the others. Without coordination, those pools can collectively oversubscribe the machine.
 
-For example, if there are 4 child processes running, each with their own scheduler:
+This library replaces the default scheduler with one that broadcasts each process's current worker count over UDP and listens for counts from peers. Every participating process uses the combined total when deciding whether it has room for another task. The result is a soft cross-process concurrency ceiling — loose rather than atomically exact, but sufficient to prevent runaway oversubscription.
 
-| Process | Current Workers | Max Workers |
-|---------|:-:|:-:|
-| Child A | 1 | 8 |
-| Child B | 3 | 8 |
-| Child C | 4 | 8 |
-| Child D | 3 | 10 |
+## Install
 
-Child D can use up to 10 workers, but it's only using 3 because the other three schedulers are using a combined total of 8 already. There is no hard limit — concurrency is throttled based on the current instance count and the last known status of instances sharing the same UDP port.
+```bash
+dotnet add package DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
+```
 
-## Features
+Or via the Package Manager Console:
 
-- Worker thread pool is throttled across processes (loose, not exact or atomic)
-- Minimal configuration — UDP port number is the only setting
-- Each scheduler instance can have its own max threads and internal queue size
-- Stale instances are automatically removed after they haven't been seen for a while
+```powershell
+Install-Package DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
+```
 
-## Limitations
+Or as a `PackageReference`:
 
-- Throttling is loose; you may temporarily exceed the desired thread count depending on timing
-- Work groups still function but aren't throttled between schedulers, only within the same instance
-- Same machine only. Relies on UDP broadcast, which most cloud providers disable
-- Worker count may spike on a new node until it syncs with existing peers
-- Works best when scheduler max values are similar. If one is 20 and others are 2, the small ones can get starved
+```xml
+<PackageReference Include="DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler" Version="0.3.0" />
+```
 
-## Usage
+## Quick start
 
-When creating your scheduler container, add an override method:
+```csharp
+using DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler;
+
+// Inside your DotNetWorkQueue consumer setup, after creating the container
+// but before calling Start(), replace the default scheduler:
+//
+//   Every process that should share the thread-count ceiling must pass
+//   the same UDP broadcast port. Processes using different ports form
+//   independent, uncoordinated pools.
+container.InjectDistributedTaskScheduler(udpBroadcastPort: 9999);
+```
+
+A fuller example using `SchedulerContainer`:
 
 ```csharp
 using (var schedulerContainer = new SchedulerContainer(RegisterService))
 {
-    // etc...
+    // ... create queue consumers, start, etc.
 }
-```
 
-Inside that override method, call the extension method to register the new task scheduler. This replaces the default one. You can leave the default port at 9999 or explicitly set one.
-
-> **Note:** All schedulers that should share thread counts must use the **same** port number. You can have multiple independent groups on the same machine by using different ports.
-
-```csharp
 private static void RegisterService(IContainer container)
 {
-    container.InjectDistributedTaskScheduler(1234);
+    container.InjectDistributedTaskScheduler(9999);
 }
 ```
 
-## Building
+## UDP broadcast port
 
-```bash
-dotnet restore Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln
-dotnet build Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln
+The integer argument to `InjectDistributedTaskScheduler` is the UDP port used for NetMQ beacon peer discovery. All cooperating processes on the same machine must pass the same port. You can run independent coordination groups on one machine by assigning each group a different port. Any free UDP port works; 9999 is a reasonable default.
+
+Dead nodes (processes that stop beaconing) are pruned automatically after approximately 10 seconds without a heartbeat.
+
+## Linux / WSL note
+
+On Linux the default beacon interface value `"loopback"` does not loop UDP broadcast back to the sending host. Pass an empty string instead via `TaskSchedulerMultipleConfiguration`:
+
+```csharp
+var config = new TaskSchedulerMultipleConfiguration
+{
+    BeaconInterface = ""
+};
+container.InjectDistributedTaskScheduler(9999, config);
 ```
 
-## Running Tests
+This issue affects Linux and WSL environments and was resolved in the default configuration as of v0.2.1, but if you see no peers discovered on Linux, this is the first thing to check.
 
-```bash
-dotnet test Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests.csproj
-```
+## Limitations
 
-## License
+- Throttling is loose; thread counts may temporarily exceed the ceiling depending on timing across processes.
+- Same-machine only. UDP broadcast is not available across cloud provider VM boundaries.
+- Worker count may spike briefly on a new node until it synchronizes with existing peers.
+- Works best when all participating schedulers have similar max-thread values.
 
-Copyright © 2019-2026 Brian Lehnen
+## Requirements
 
-This program is free software: you can redistribute it and/or modify it under the terms of the [GNU Lesser General Public License v2.1](http://www.gnu.org/licenses/lgpl-2.1.html) or any later version.
+- .NET 8 or .NET 10
+- Windows or Linux
+- [DotNetWorkQueue](https://github.com/blehnen/DotNetWorkQueue) 0.9.31 or newer (pulled in transitively)
 
-## 3rd Party Libraries
+## Third-party libraries
 
 - [DotNetWorkQueue](https://github.com/blehnen/DotNetWorkQueue)
 - [NetMQ](https://github.com/zeromq/netmq)
+
+## License
+
+Copyright &copy; 2019&ndash;2026 Brian Lehnen
+
+Licensed under the [GNU Lesser General Public License v2.1 or later (LGPL-2.1-or-later)](LICENSE).
+
+## Links
+
+- GitHub repository: <https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler>
+- Issue tracker: <https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/issues>
+- DotNetWorkQueue upstream: <https://github.com/blehnen/DotNetWorkQueue>
