@@ -34,13 +34,13 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
     public class TaskSchedulerJobCountSync: ITaskSchedulerJobCountSync
     {
         private long _currentTaskCount;
-        private readonly object _lockSocket = new object();
         private readonly ConcurrentDictionary<int, long> _otherProcessorCounts;
         private string _hostAddress;
         private int _hostPort;
 
         private NetMQActor _actor;
         private NetMQPoller _poller;
+        private NetMQQueue<SetCountMsg> _outbound;
         private readonly ITaskSchedulerBus _bus;
         private readonly ILogger _log;
 
@@ -66,14 +66,8 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// <returns></returns>
         public long GetCurrentTaskCount()
         {
-            long myCount;
-            long otherCount;
-            lock (_lockSocket)
-            {
-                myCount = Interlocked.Read(ref _currentTaskCount);
-                otherCount = _otherProcessorCounts.Values.Sum();
-            }
-
+            var myCount = Interlocked.Read(ref _currentTaskCount);
+            var otherCount = _otherProcessorCounts.Values.Sum();
             var total = myCount + otherCount;
             _log.LogDebug($"Total {total} = [M]{myCount}+[O]{otherCount}");
             return total;
@@ -87,15 +81,9 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// </returns>
         public long IncreaseCurrentTaskCount()
         {
-            lock (_lockSocket)
-            {
-                var current = Interlocked.Increment(ref _currentTaskCount);
-                _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
-                    .SendMoreFrame(TaskSchedulerBusCommands.SetCount.ToString())
-                    .SendMoreFrame(_hostPort.ToString())
-                    .SendFrame(current.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                return current;
-            }
+            var newValue = Interlocked.Increment(ref _currentTaskCount);
+            _outbound?.Enqueue(new SetCountMsg(_hostPort, newValue));
+            return newValue;
         }
 
         /// <summary>
@@ -106,15 +94,9 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// </returns>
         public long DecreaseCurrentTaskCount()
         {
-            lock (_lockSocket)
-            {
-                var current = Interlocked.Decrement(ref _currentTaskCount);
-                _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
-                    .SendMoreFrame(TaskSchedulerBusCommands.SetCount.ToString())
-                    .SendMoreFrame(_hostPort.ToString())
-                    .SendFrame(current.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                return current;
-            }
+            var newValue = Interlocked.Decrement(ref _currentTaskCount);
+            _outbound?.Enqueue(new SetCountMsg(_hostPort, newValue));
+            return newValue;
         }
 
         /// <summary>
@@ -122,36 +104,31 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// </summary>
         public void Start()
         {
-            lock (_lockSocket)
-            {
-                _actor = _bus.Start();
-            }
+            _actor = _bus.Start();
             _currentTaskCount = 0;
             try
             {
-                lock (_lockSocket)
-                {
-                    _actor.SendFrame(TaskSchedulerBusCommands.GetHostAddress.ToString());
-                }
+                _actor.SendFrame(TaskSchedulerBusCommands.GetHostAddress.ToString());
                 _hostAddress = _actor.ReceiveFrameString();
                 _hostPort = new Uri("http://" + _hostAddress).Port;
 
                 //second beacon time, so we wait to ensure beacon has fired
                 Thread.Sleep(1100);
 
-                //let other nodes know we are here
-                lock (_lockSocket)
-                {
-                    _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
-                        .SendMoreFrame(TaskSchedulerBusCommands.BroadCast.ToString())
-                        .SendFrame(_hostAddress);
-                }
+                //let other nodes know we are here — sent on the caller thread
+                //BEFORE the poller takes ownership of the socket.
+                _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
+                    .SendMoreFrame(TaskSchedulerBusCommands.BroadCast.ToString())
+                    .SendFrame(_hostAddress);
 
                 // wire the poller AFTER the initial broadcast so the poller owns the
-                // socket for the rest of the lifetime; this replaces the old
-                // while(!_stopRequested) ProcessMessages() spin loop.
+                // socket for the rest of the lifetime. Outbound SetCount messages
+                // flow through _outbound so they always hit the socket on the
+                // poller thread — no user lock required.
+                _outbound = new NetMQQueue<SetCountMsg>();
+                _outbound.ReceiveReady += OnOutboundReady;
                 _actor.ReceiveReady += OnActorReady;
-                _poller = new NetMQPoller { _actor };
+                _poller = new NetMQPoller { _actor, _outbound };
 
                 // Blocks until _poller.Stop() is called from Dispose.
                 _poller.Run();
@@ -224,6 +201,17 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             }
         }
 
+        private void OnOutboundReady(object sender, NetMQQueueEventArgs<SetCountMsg> e)
+        {
+            while (e.Queue.TryDequeue(out var msg, TimeSpan.Zero))
+            {
+                _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
+                    .SendMoreFrame(TaskSchedulerBusCommands.SetCount.ToString())
+                    .SendMoreFrame(msg.Port.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                    .SendFrame(msg.Count.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+        }
+
         #region IDisposable Support
         private bool _disposedValue; // To detect redundant calls
         /// <summary>
@@ -239,11 +227,9 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                     _poller?.Stop();
                     try
                     {
-                        lock (_lockSocket)
-                        {
-                            _poller?.Dispose();
-                            _actor?.Dispose();
-                        }
+                        _poller?.Dispose();
+                        _outbound?.Dispose();
+                        _actor?.Dispose();
                     }
                     catch (SocketException error)
                     {
