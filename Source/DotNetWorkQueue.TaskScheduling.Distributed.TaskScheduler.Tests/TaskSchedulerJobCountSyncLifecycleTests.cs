@@ -33,23 +33,33 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
             var bus = new TaskSchedulerBus(new XunitLogger(_output), config);
             var sync = new TaskSchedulerJobCountSync(bus, new XunitLogger(_output));
 
-            sync.Start();
-            await Task.Delay(2500);
+            try
+            {
+                sync.Start();
+                await Task.Delay(2500);
 
-            // Operate
-            Assert.Equal(1L, sync.IncreaseCurrentTaskCount());
-            Assert.Equal(2L, sync.IncreaseCurrentTaskCount());
-            Assert.Equal(1L, sync.DecreaseCurrentTaskCount());
-            Assert.Equal(1L, sync.GetCurrentTaskCount());
+                // Operate
+                Assert.Equal(1L, sync.IncreaseCurrentTaskCount());
+                Assert.Equal(2L, sync.IncreaseCurrentTaskCount());
+                Assert.Equal(1L, sync.DecreaseCurrentTaskCount());
+                Assert.Equal(1L, sync.GetCurrentTaskCount());
 
-            // Dispose must not hang.
-            var disposeTask = Task.Run(() => sync.Dispose());
-            var deadline = Task.Delay(TimeSpan.FromSeconds(10));
-            var completed = await Task.WhenAny(disposeTask, deadline);
-            Assert.True(
-                completed == disposeTask,
-                "Dispose() did not complete within 10s — likely hot-wait regression or poller thread not exiting");
-            await disposeTask; // surface any exceptions
+                // Dispose must not hang.
+                var disposeTask = Task.Run(() => sync.Dispose());
+                var deadline = Task.Delay(TimeSpan.FromSeconds(10));
+                var completed = await Task.WhenAny(disposeTask, deadline);
+                Assert.True(
+                    completed == disposeTask,
+                    "Dispose() did not complete within 10s — likely hot-wait regression or poller thread not exiting");
+                await disposeTask; // surface any exceptions
+            }
+            finally
+            {
+                // Idempotent safety net: if any assertion above throws before the
+                // deliberate Dispose call, ensure the poller thread still exits so
+                // subsequent tests in [Collection("NetMQ")] aren't polluted.
+                try { sync.Dispose(); } catch { /* already failing */ }
+            }
         }
 
         // Copied verbatim from TaskSchedulerJobCountSyncTests.cs:154-168. Non-generic.
