@@ -42,6 +42,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         private int _hostPort;
 
         private NetMQActor _actor;
+        private NetMQPoller _poller;
         private readonly ITaskSchedulerBus _bus;
         private readonly ILogger _log;
 
@@ -137,6 +138,8 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 }
                 _hostAddress = _actor.ReceiveFrameString();
                 _hostPort = new Uri("http://" + _hostAddress).Port;
+
+                _poller = new NetMQPoller();
 
                 //second beacon time, so we wait to ensure beacon has fired
                 Thread.Sleep(1100);
@@ -250,6 +253,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                     {
                         lock (_lockSocket)
                         {
+                            _poller?.Dispose();
                             _actor?.Dispose();
                         }
                     }
