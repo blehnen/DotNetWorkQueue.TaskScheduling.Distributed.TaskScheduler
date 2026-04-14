@@ -1,5 +1,12 @@
 # Changelog
 
+### 0.4.0 2026-04-14
+
+* Fix: rewrite `TaskSchedulerJobCountSync` message loop to eliminate the lock-contention deadlock between `IncreaseCurrentTaskCount` / `DecreaseCurrentTaskCount` and the legacy `ProcessMessages` loop. The old `_lockSocket` + polling pattern has been replaced with a `NetMQPoller` driving the existing `NetMQActor` plus a new `NetMQQueue<SetCountMsg>` for outbound counter updates; all socket I/O now runs on a dedicated background thread (`TaskSchedulerJobCountSync.Poller`, `IsBackground = true`) owned exclusively by the poller. Closes [issue #6](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/issues/6).
+* **Behavior change:** `TaskSchedulerJobCountSync.Start()` is now non-blocking. It still performs the host-address handshake, the ~1.1s beacon grace sleep, and the initial `BroadCast` synchronously on the caller thread, but socket-poll wiring (`ReceiveReady` handlers + `NetMQPoller` construction) is now spawned onto a dedicated background thread and `Start()` returns as soon as that thread is running. Callers that subclass or wrap `TaskSchedulerJobCountSync` should not rely on `Start()` blocking for the lifetime of the poller. The public interface signature on `ITaskSchedulerJobCountSync` is unchanged.
+* `Dispose` now calls `_poller.Stop()`, joins the poller thread with a 5-second timeout (logging a warning on timeout), and disposes `_outbound`, `_actor`, and `_poller` in order. Existing socket-close error suppression (Win32 `10035` / `10054`) is preserved.
+* Add unit and integration tests covering the new poller lifecycle, outbound queue draining, and shutdown timing.
+
 ### 0.3.0 2026-04-10
 
 * **Breaking:** Drop `net48` and `net472` target frameworks; main library now targets `net10.0` and `net8.0` only (matches upstream DotNetWorkQueue 0.9.19+ which also dropped .NET Framework support)

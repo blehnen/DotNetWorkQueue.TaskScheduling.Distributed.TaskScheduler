@@ -103,6 +103,13 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// <summary>
         /// Starts this instance.
         /// </summary>
+        /// <remarks>
+        /// Non-blocking. The caller thread performs the host-address handshake,
+        /// the ~1.1s beacon grace sleep, and the initial <c>BroadCast</c>
+        /// synchronously, then returns as soon as the dedicated background
+        /// poller thread is running. Callers must not rely on <see cref="Start"/>
+        /// blocking for the lifetime of the poller.
+        /// </remarks>
         public void Start()
         {
             _actor = _bus.Start();

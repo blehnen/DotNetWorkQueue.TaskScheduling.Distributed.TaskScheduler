@@ -27,7 +27,7 @@ Install-Package DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
 Or as a `PackageReference`:
 
 ```xml
-<PackageReference Include="DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler" Version="0.3.0" />
+<PackageReference Include="DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler" Version="0.4.0" />
 ```
 
 ## Quick start
