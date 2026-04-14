@@ -33,8 +33,6 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
     /// </summary>
     public class TaskSchedulerJobCountSync: ITaskSchedulerJobCountSync
     {
-        private volatile bool _stopRequested;
-        private volatile bool _running;
         private long _currentTaskCount;
         private readonly object _lockSocket = new object();
         private readonly ConcurrentDictionary<int, long> _otherProcessorCounts;
@@ -129,7 +127,6 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 _actor = _bus.Start();
             }
             _currentTaskCount = 0;
-            _running = true;
             try
             {
                 lock (_lockSocket)
@@ -138,8 +135,6 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 }
                 _hostAddress = _actor.ReceiveFrameString();
                 _hostPort = new Uri("http://" + _hostAddress).Port;
-
-                _poller = new NetMQPoller();
 
                 //second beacon time, so we wait to ensure beacon has fired
                 Thread.Sleep(1100);
@@ -152,37 +147,26 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                         .SendFrame(_hostAddress);
                 }
 
-                // receive messages from other nodes on the bus
-                while (!_stopRequested)
-                {
-                    try
-                    {
-                        ProcessMessages();
-                    }
-                    catch (Exception error)
-                    {
-                        _log.LogError($"Failed to handle NetMCQ commands{System.Environment.NewLine}{error}");
-                    }
-                }
+                // wire the poller AFTER the initial broadcast so the poller owns the
+                // socket for the rest of the lifetime; this replaces the old
+                // while(!_stopRequested) ProcessMessages() spin loop.
+                _actor.ReceiveReady += OnActorReady;
+                _poller = new NetMQPoller { _actor };
+
+                // Blocks until _poller.Stop() is called from Dispose.
+                _poller.Run();
             }
             catch (Exception error)
             {
                 _log.LogError($"A fatal error occurred while processing NetMCQ commands{System.Environment.NewLine}{error}");
             }
-            finally
-            {
-                _running = false;
-            }
         }
 
-        private void ProcessMessages()
+        private void OnActorReady(object sender, NetMQActorEventArgs e)
         {
-            lock (_lockSocket)
+            try
             {
-                if(_stopRequested) return;
-                
-                string message;
-                if (!_actor.TryReceiveFrameString(TimeSpan.FromMilliseconds(10), Encoding.ASCII, out message)) return;
+                var message = _actor.ReceiveFrameString(Encoding.ASCII);
                 if (message == TaskSchedulerBusCommands.BroadCast.ToString())
                 {
                     // another node has let us know they are here
@@ -205,7 +189,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                     var uri = new Uri(removedAddress);
                     long temp;
                     _otherProcessorCounts.TryRemove(uri.Port, out temp);
-                    _log.LogDebug( $"Removed node {removedAddress} from the Bus; it's processing count was {temp}");
+                    _log.LogDebug($"Removed node {removedAddress} from the Bus; it's processing count was {temp}");
                     RemoteCountChanged?.Invoke(this, EventArgs.Empty);
                 }
                 else if (message == TaskSchedulerBusCommands.SetCount.ToString())
@@ -234,6 +218,10 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                     _log.LogDebug(message);
                 }
             }
+            catch (Exception error)
+            {
+                _log.LogError($"Failed to handle NetMCQ commands{System.Environment.NewLine}{error}");
+            }
         }
 
         #region IDisposable Support
@@ -248,7 +236,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             {
                 if (disposing)
                 {
-                    _stopRequested = true;
+                    _poller?.Stop();
                     try
                     {
                         lock (_lockSocket)
@@ -264,10 +252,6 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                             return;
                         }
                         throw;
-                    }
-                    while (_running)
-                    {
-                        Thread.Sleep(100);
                     }
                 }
                 _disposedValue = true;
