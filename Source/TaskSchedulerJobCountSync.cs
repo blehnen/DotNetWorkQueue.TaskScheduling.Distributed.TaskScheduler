@@ -33,15 +33,15 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
     /// </summary>
     public class TaskSchedulerJobCountSync: ITaskSchedulerJobCountSync
     {
-        private volatile bool _stopRequested;
-        private volatile bool _running;
         private long _currentTaskCount;
-        private readonly object _lockSocket = new object();
         private readonly ConcurrentDictionary<int, long> _otherProcessorCounts;
         private string _hostAddress;
         private int _hostPort;
 
         private NetMQActor _actor;
+        private NetMQPoller _poller;
+        private NetMQQueue<SetCountMsg> _outbound;
+        private Thread _pollerThread;
         private readonly ITaskSchedulerBus _bus;
         private readonly ILogger _log;
 
@@ -67,14 +67,8 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// <returns></returns>
         public long GetCurrentTaskCount()
         {
-            long myCount;
-            long otherCount;
-            lock (_lockSocket)
-            {
-                myCount = Interlocked.Read(ref _currentTaskCount);
-                otherCount = _otherProcessorCounts.Values.Sum();
-            }
-
+            var myCount = Interlocked.Read(ref _currentTaskCount);
+            var otherCount = _otherProcessorCounts.Values.Sum();
             var total = myCount + otherCount;
             _log.LogDebug($"Total {total} = [M]{myCount}+[O]{otherCount}");
             return total;
@@ -88,15 +82,9 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// </returns>
         public long IncreaseCurrentTaskCount()
         {
-            lock (_lockSocket)
-            {
-                var current = Interlocked.Increment(ref _currentTaskCount);
-                _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
-                    .SendMoreFrame(TaskSchedulerBusCommands.SetCount.ToString())
-                    .SendMoreFrame(_hostPort.ToString())
-                    .SendFrame(current.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                return current;
-            }
+            var newValue = Interlocked.Increment(ref _currentTaskCount);
+            _outbound?.Enqueue(new SetCountMsg(_hostPort, newValue));
+            return newValue;
         }
 
         /// <summary>
@@ -107,15 +95,9 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// </returns>
         public long DecreaseCurrentTaskCount()
         {
-            lock (_lockSocket)
-            {
-                var current = Interlocked.Decrement(ref _currentTaskCount);
-                _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
-                    .SendMoreFrame(TaskSchedulerBusCommands.SetCount.ToString())
-                    .SendMoreFrame(_hostPort.ToString())
-                    .SendFrame(current.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                return current;
-            }
+            var newValue = Interlocked.Decrement(ref _currentTaskCount);
+            _outbound?.Enqueue(new SetCountMsg(_hostPort, newValue));
+            return newValue;
         }
 
         /// <summary>
@@ -123,63 +105,65 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// </summary>
         public void Start()
         {
-            lock (_lockSocket)
-            {
-                _actor = _bus.Start();
-            }
+            _actor = _bus.Start();
             _currentTaskCount = 0;
-            _running = true;
             try
             {
-                lock (_lockSocket)
-                {
-                    _actor.SendFrame(TaskSchedulerBusCommands.GetHostAddress.ToString());
-                }
+                // Phase A (caller thread): host address handshake + beacon grace.
+                _actor.SendFrame(TaskSchedulerBusCommands.GetHostAddress.ToString());
                 _hostAddress = _actor.ReceiveFrameString();
                 _hostPort = new Uri("http://" + _hostAddress).Port;
 
                 //second beacon time, so we wait to ensure beacon has fired
                 Thread.Sleep(1100);
 
-                //let other nodes know we are here
-                lock (_lockSocket)
-                {
-                    _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
-                        .SendMoreFrame(TaskSchedulerBusCommands.BroadCast.ToString())
-                        .SendFrame(_hostAddress);
-                }
+                // Phase B (caller thread): create the outbound queue and send the
+                // initial BroadCast DIRECTLY on the caller thread, BEFORE the
+                // poller thread assumes ownership of _actor. Do NOT route this
+                // through _outbound (typed to SetCountMsg, no broadcast variant).
+                _outbound = new NetMQQueue<SetCountMsg>();
 
-                // receive messages from other nodes on the bus
-                while (!_stopRequested)
+                _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
+                    .SendMoreFrame(TaskSchedulerBusCommands.BroadCast.ToString())
+                    .SendFrame(_hostAddress);
+
+                // Phase C: spawn the dedicated poller thread and return. All
+                // ReceiveReady wiring + NetMQPoller construction happen inside
+                // RunPoller so the poller thread owns the sockets for the rest
+                // of the lifetime.
+                _pollerThread = new Thread(RunPoller)
                 {
-                    try
-                    {
-                        ProcessMessages();
-                    }
-                    catch (Exception error)
-                    {
-                        _log.LogError($"Failed to handle NetMCQ commands{System.Environment.NewLine}{error}");
-                    }
-                }
+                    IsBackground = true,
+                    Name = "TaskSchedulerJobCountSync.Poller"
+                };
+                _pollerThread.Start();
             }
             catch (Exception error)
             {
                 _log.LogError($"A fatal error occurred while processing NetMCQ commands{System.Environment.NewLine}{error}");
             }
-            finally
+        }
+
+        private void RunPoller()
+        {
+            try
             {
-                _running = false;
+                _actor.ReceiveReady += OnActorReady;
+                _outbound.ReceiveReady += OnOutboundReady;
+                _poller = new NetMQPoller { _actor, _outbound };
+                _poller.Run();
+            }
+            catch (Exception error)
+            {
+                _log.LogError($"TaskSchedulerJobCountSync poller thread terminated{System.Environment.NewLine}{error}");
             }
         }
 
-        private void ProcessMessages()
+        private void OnActorReady(object sender, NetMQActorEventArgs e)
         {
-            lock (_lockSocket)
+            try
             {
-                if(_stopRequested) return;
-                
-                string message;
-                if (!_actor.TryReceiveFrameString(TimeSpan.FromMilliseconds(10), Encoding.ASCII, out message)) return;
+                var message = _actor.ReceiveFrameString(Encoding.ASCII);
                 if (message == TaskSchedulerBusCommands.BroadCast.ToString())
                 {
                     // another node has let us know they are here
@@ -202,7 +186,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                     var uri = new Uri(removedAddress);
                     long temp;
                     _otherProcessorCounts.TryRemove(uri.Port, out temp);
-                    _log.LogDebug( $"Removed node {removedAddress} from the Bus; it's processing count was {temp}");
+                    _log.LogDebug($"Removed node {removedAddress} from the Bus; it's processing count was {temp}");
                     RemoteCountChanged?.Invoke(this, EventArgs.Empty);
                 }
                 else if (message == TaskSchedulerBusCommands.SetCount.ToString())
@@ -231,6 +215,21 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                     _log.LogDebug(message);
                 }
             }
+            catch (Exception error)
+            {
+                _log.LogError($"Failed to handle NetMCQ commands{System.Environment.NewLine}{error}");
+            }
+        }
+
+        private void OnOutboundReady(object sender, NetMQQueueEventArgs<SetCountMsg> e)
+        {
+            while (e.Queue.TryDequeue(out var msg, TimeSpan.Zero))
+            {
+                _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
+                    .SendMoreFrame(TaskSchedulerBusCommands.SetCount.ToString())
+                    .SendMoreFrame(msg.Port.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                    .SendFrame(msg.Count.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
         }
 
         #region IDisposable Support
@@ -245,13 +244,16 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             {
                 if (disposing)
                 {
-                    _stopRequested = true;
                     try
                     {
-                        lock (_lockSocket)
+                        _poller?.Stop();
+                        if (_pollerThread != null && !_pollerThread.Join(TimeSpan.FromSeconds(5)))
                         {
-                            _actor?.Dispose();
+                            _log.LogWarning("TaskSchedulerJobCountSync poller thread did not exit within 5s; forcing disposal");
                         }
+                        _outbound?.Dispose();
+                        _actor?.Dispose();
+                        _poller?.Dispose();
                     }
                     catch (SocketException error)
                     {
@@ -260,10 +262,6 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                             return;
                         }
                         throw;
-                    }
-                    while (_running)
-                    {
-                        Thread.Sleep(100);
                     }
                 }
                 _disposedValue = true;
@@ -279,4 +277,11 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         }
         #endregion
     }
+
+    /// <summary>
+    /// Outbound message placed on the NetMQQueue&lt;SetCountMsg&gt; by
+    /// IncreaseCurrentTaskCount / DecreaseCurrentTaskCount; drained on the
+    /// poller thread and translated into a Publish/SetCount wire frame.
+    /// </summary>
+    internal readonly record struct SetCountMsg(int Port, long Count);
 }
