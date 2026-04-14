@@ -244,12 +244,16 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             {
                 if (disposing)
                 {
-                    _poller?.Stop();
                     try
                     {
-                        _poller?.Dispose();
+                        _poller?.Stop();
+                        if (_pollerThread != null && !_pollerThread.Join(TimeSpan.FromSeconds(5)))
+                        {
+                            _log.LogWarning("TaskSchedulerJobCountSync poller thread did not exit within 5s; forcing disposal");
+                        }
                         _outbound?.Dispose();
                         _actor?.Dispose();
+                        _poller?.Dispose();
                     }
                     catch (SocketException error)
                     {

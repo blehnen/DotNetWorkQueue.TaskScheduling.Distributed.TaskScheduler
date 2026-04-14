@@ -17,7 +17,6 @@
 //Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 // ---------------------------------------------------------------------
 using System;
-using System.Threading.Tasks;
 using DotNetWorkQueue.Validation;
 using Microsoft.Extensions.Logging;
 
@@ -55,10 +54,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         public override void Start()
         {
             _jobCount.RemoteCountChanged += JobCountHasChanged;
-            Task.Run(() =>
-            {
-                _jobCount.Start();
-            });
+            _jobCount.Start();
             base.Start();
         }
 
