@@ -118,13 +118,13 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 Thread.Sleep(1100);
 
                 // Phase B (caller thread): create the outbound queue and send the
-                // initial AddedNode broadcast DIRECTLY on the caller thread, BEFORE
-                // the poller thread assumes ownership of _actor. Do NOT route this
+                // initial BroadCast DIRECTLY on the caller thread, BEFORE the
+                // poller thread assumes ownership of _actor. Do NOT route this
                 // through _outbound (typed to SetCountMsg, no broadcast variant).
                 _outbound = new NetMQQueue<SetCountMsg>();
 
                 _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
-                    .SendMoreFrame(TaskSchedulerBusCommands.AddedNode.ToString())
+                    .SendMoreFrame(TaskSchedulerBusCommands.BroadCast.ToString())
                     .SendFrame(_hostAddress);
 
                 // Phase C: spawn the dedicated poller thread and return. All
