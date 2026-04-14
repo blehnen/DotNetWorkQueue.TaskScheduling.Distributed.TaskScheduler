@@ -41,6 +41,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         private NetMQActor _actor;
         private NetMQPoller _poller;
         private NetMQQueue<SetCountMsg> _outbound;
+        private Thread _pollerThread;
         private readonly ITaskSchedulerBus _bus;
         private readonly ILogger _log;
 
@@ -108,6 +109,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             _currentTaskCount = 0;
             try
             {
+                // Phase A (caller thread): host address handshake + beacon grace.
                 _actor.SendFrame(TaskSchedulerBusCommands.GetHostAddress.ToString());
                 _hostAddress = _actor.ReceiveFrameString();
                 _hostPort = new Uri("http://" + _hostAddress).Port;
@@ -115,27 +117,45 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 //second beacon time, so we wait to ensure beacon has fired
                 Thread.Sleep(1100);
 
-                //let other nodes know we are here — sent on the caller thread
-                //BEFORE the poller takes ownership of the socket.
+                // Phase B (caller thread): create the outbound queue and send the
+                // initial AddedNode broadcast DIRECTLY on the caller thread, BEFORE
+                // the poller thread assumes ownership of _actor. Do NOT route this
+                // through _outbound (typed to SetCountMsg, no broadcast variant).
+                _outbound = new NetMQQueue<SetCountMsg>();
+
                 _actor.SendMoreFrame(TaskSchedulerBusCommands.Publish.ToString())
-                    .SendMoreFrame(TaskSchedulerBusCommands.BroadCast.ToString())
+                    .SendMoreFrame(TaskSchedulerBusCommands.AddedNode.ToString())
                     .SendFrame(_hostAddress);
 
-                // wire the poller AFTER the initial broadcast so the poller owns the
-                // socket for the rest of the lifetime. Outbound SetCount messages
-                // flow through _outbound so they always hit the socket on the
-                // poller thread — no user lock required.
-                _outbound = new NetMQQueue<SetCountMsg>();
-                _outbound.ReceiveReady += OnOutboundReady;
-                _actor.ReceiveReady += OnActorReady;
-                _poller = new NetMQPoller { _actor, _outbound };
-
-                // Blocks until _poller.Stop() is called from Dispose.
-                _poller.Run();
+                // Phase C: spawn the dedicated poller thread and return. All
+                // ReceiveReady wiring + NetMQPoller construction happen inside
+                // RunPoller so the poller thread owns the sockets for the rest
+                // of the lifetime.
+                _pollerThread = new Thread(RunPoller)
+                {
+                    IsBackground = true,
+                    Name = "TaskSchedulerJobCountSync.Poller"
+                };
+                _pollerThread.Start();
             }
             catch (Exception error)
             {
                 _log.LogError($"A fatal error occurred while processing NetMCQ commands{System.Environment.NewLine}{error}");
+            }
+        }
+
+        private void RunPoller()
+        {
+            try
+            {
+                _actor.ReceiveReady += OnActorReady;
+                _outbound.ReceiveReady += OnOutboundReady;
+                _poller = new NetMQPoller { _actor, _outbound };
+                _poller.Run();
+            }
+            catch (Exception error)
+            {
+                _log.LogError($"TaskSchedulerJobCountSync poller thread terminated{System.Environment.NewLine}{error}");
             }
         }
 
