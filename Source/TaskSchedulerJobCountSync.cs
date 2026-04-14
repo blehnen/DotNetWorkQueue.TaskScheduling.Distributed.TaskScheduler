@@ -279,4 +279,11 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         }
         #endregion
     }
+
+    /// <summary>
+    /// Outbound message placed on the NetMQQueue&lt;SetCountMsg&gt; by
+    /// IncreaseCurrentTaskCount / DecreaseCurrentTaskCount; drained on the
+    /// poller thread and translated into a Publish/SetCount wire frame.
+    /// </summary>
+    internal readonly record struct SetCountMsg(int Port, long Count);
 }
