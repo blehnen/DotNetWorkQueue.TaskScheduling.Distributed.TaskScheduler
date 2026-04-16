@@ -1,5 +1,13 @@
 # Changelog
 
+### 0.5.0 2026-04-16
+
+* Fix: `RunPoller` start race on fast `Start()` → `Dispose()` cycles — add `volatile bool _disposing` flag checked before and after `NetMQPoller` construction to prevent orphan poller creation and suppress noisy `ObjectDisposedException` log (ISSUE-025)
+* Cleanup: delete `NetMqQueueApiProbeTests.cs` probe file (35 LoC, superseded by real handler tests from 0.4.0) (ISSUE-026)
+* Cleanup: extract duplicated `XunitLogger`, `NextPort()`, `BeaconInterface` from 4 test files into shared `NetMqTestSupport.cs` (~80 LoC removed) (ISSUE-027)
+* Docs: fix README usage example — remove incorrect `udpBroadcastPort:` named argument (actual parameter is positional) (ISSUE-030)
+* Bump `DotNetWorkQueue` dependency from 0.9.31 to 0.9.32
+
 ### 0.4.0 2026-04-14
 
 * Fix: rewrite `TaskSchedulerJobCountSync` message loop to eliminate the lock-contention deadlock between `IncreaseCurrentTaskCount` / `DecreaseCurrentTaskCount` and the legacy `ProcessMessages` loop. The old `_lockSocket` + polling pattern has been replaced with a `NetMQPoller` driving the existing `NetMQActor` plus a new `NetMQQueue<SetCountMsg>` for outbound counter updates; all socket I/O now runs on a dedicated background thread (`TaskSchedulerJobCountSync.Poller`, `IsBackground = true`) owned exclusively by the poller. Closes [issue #6](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/issues/6).
