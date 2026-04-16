@@ -1,6 +1,4 @@
 using System;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -12,17 +10,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
     [Collection("NetMQ")]
     public class TaskSchedulerJobCountSyncTests
     {
-        private static int _nextPort = 40000 + Random.Shared.Next(0, 10000);
-        private static int NextPort() => Interlocked.Increment(ref _nextPort);
-
-        // On Linux, NetMQBeacon's "loopback" mode binds to 127.0.0.1 but sends to 255.255.255.255,
-        // and the kernel will not deliver those broadcasts back to a 127.0.0.1 socket. Use the
-        // first available interface instead, which binds to the subnet broadcast address and works
-        // for same-host peer discovery on both platforms.
-        private static readonly string BeaconInterface =
-            RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "" : "loopback";
-
-        private readonly ILogger _logger;
+        private readonly XunitLogger _logger;
 
         public TaskSchedulerJobCountSyncTests(ITestOutputHelper output)
         {
@@ -32,8 +20,8 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
         [Fact]
         public async Task LocalCountIncrementAndDecrement()
         {
-            var port = NextPort();
-            var config = new TaskSchedulerMultipleConfiguration(port, BeaconInterface);
+            var port = TestPorts.Next();
+            var config = new TaskSchedulerMultipleConfiguration(port, BeaconInterfaces.Default);
             var bus = new TaskSchedulerBus(_logger, config);
             using var sync = new TaskSchedulerJobCountSync(bus, _logger);
 
@@ -55,13 +43,13 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
         [Fact]
         public async Task TwoNodesDiscoverEachOtherAndSyncCounts()
         {
-            var port = NextPort();
+            var port = TestPorts.Next();
 
-            var config1 = new TaskSchedulerMultipleConfiguration(port, BeaconInterface);
+            var config1 = new TaskSchedulerMultipleConfiguration(port, BeaconInterfaces.Default);
             var bus1 = new TaskSchedulerBus(_logger, config1);
             var sync1 = new TaskSchedulerJobCountSync(bus1, _logger);
 
-            var config2 = new TaskSchedulerMultipleConfiguration(port, BeaconInterface);
+            var config2 = new TaskSchedulerMultipleConfiguration(port, BeaconInterfaces.Default);
             var bus2 = new TaskSchedulerBus(_logger, config2);
             var sync2 = new TaskSchedulerJobCountSync(bus2, _logger);
 
@@ -102,12 +90,12 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
         [Fact]
         public async Task ThreeNodesAllSeeSharedCount()
         {
-            var port = NextPort();
+            var port = TestPorts.Next();
 
             var syncs = new TaskSchedulerJobCountSync[3];
             for (var i = 0; i < 3; i++)
             {
-                var config = new TaskSchedulerMultipleConfiguration(port, BeaconInterface);
+                var config = new TaskSchedulerMultipleConfiguration(port, BeaconInterfaces.Default);
                 var bus = new TaskSchedulerBus(_logger, config);
                 syncs[i] = new TaskSchedulerJobCountSync(bus, _logger);
             }
@@ -148,22 +136,6 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
                 {
                     sync.Dispose();
                 }
-            }
-        }
-
-        private class XunitLogger : ILogger
-        {
-            private readonly ITestOutputHelper _output;
-
-            public XunitLogger(ITestOutputHelper output) => _output = output;
-
-            public IDisposable BeginScope<TState>(TState state) where TState : notnull => null!;
-            public bool IsEnabled(LogLevel logLevel) => true;
-
-            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
-            {
-                try { _output.WriteLine($"[{logLevel}] {formatter(state, exception)}"); }
-                catch { /* test may have ended */ }
             }
         }
     }

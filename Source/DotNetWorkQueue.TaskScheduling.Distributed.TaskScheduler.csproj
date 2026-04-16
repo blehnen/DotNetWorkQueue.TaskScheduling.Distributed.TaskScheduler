@@ -6,7 +6,8 @@
     <AssemblyName>DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.4.0</Version>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1903</WarningsNotAsErrors> <!-- transitive System.Security.Cryptography.Xml 8.0.2 vuln; fix in separate PR -->
+    <Version>0.5.0</Version>
     <Company>Brian Lehnen</Company>
     <Copyright>Copyright © Brian Lehnen 2019-2026</Copyright>
     <Product>DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler</Product>
@@ -33,7 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNetWorkQueue" Version="0.9.31" />
+    <PackageReference Include="DotNetWorkQueue" Version="0.9.32" />
     <PackageReference Include="NetMQ" Version="4.0.2.2" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.201" PrivateAssets="All" />
   </ItemGroup>

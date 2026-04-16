@@ -1,8 +1,5 @@
 using System;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,13 +8,6 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
     [Collection("NetMQ")]
     public class TaskSchedulerJobCountSyncLifecycleTests
     {
-        // Port base 60000 — disjoint from all other test files.
-        private static int _nextPort = 60000 + Random.Shared.Next(0, 1000);
-        private static int NextPort() => Interlocked.Increment(ref _nextPort);
-
-        private static readonly string BeaconInterface =
-            RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "" : "loopback";
-
         private readonly ITestOutputHelper _output;
 
         public TaskSchedulerJobCountSyncLifecycleTests(ITestOutputHelper output)
@@ -28,8 +18,8 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
         [Fact]
         public async Task Start_Operate_Dispose_Completes_Within_Timeout()
         {
-            var port = NextPort();
-            var config = new TaskSchedulerMultipleConfiguration(port, BeaconInterface);
+            var port = TestPorts.Next();
+            var config = new TaskSchedulerMultipleConfiguration(port, BeaconInterfaces.Default);
             var bus = new TaskSchedulerBus(new XunitLogger(_output), config);
             var sync = new TaskSchedulerJobCountSync(bus, new XunitLogger(_output));
 
@@ -62,21 +52,5 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests
             }
         }
 
-        // Copied verbatim from TaskSchedulerJobCountSyncTests.cs:154-168. Non-generic.
-        private class XunitLogger : ILogger
-        {
-            private readonly ITestOutputHelper _output;
-
-            public XunitLogger(ITestOutputHelper output) => _output = output;
-
-            public IDisposable BeginScope<TState>(TState state) where TState : notnull => null!;
-            public bool IsEnabled(LogLevel logLevel) => true;
-
-            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
-            {
-                try { _output.WriteLine($"[{logLevel}] {formatter(state, exception)}"); }
-                catch { /* test may have ended */ }
-            }
-        }
     }
 }

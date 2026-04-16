@@ -41,7 +41,7 @@ using DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler;
 //   Every process that should share the thread-count ceiling must pass
 //   the same UDP broadcast port. Processes using different ports form
 //   independent, uncoordinated pools.
-container.InjectDistributedTaskScheduler(udpBroadcastPort: 9999);
+container.InjectDistributedTaskScheduler(9999);
 ```
 
 A fuller example using `SchedulerContainer`:
