@@ -42,6 +42,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         private NetMQPoller _poller;
         private NetMQQueue<SetCountMsg> _outbound;
         private Thread _pollerThread;
+        private volatile bool _disposing;
         private readonly ITaskSchedulerBus _bus;
         private readonly ILogger _log;
 
@@ -155,14 +156,24 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         {
             try
             {
+                if (_disposing) return;
+
                 _actor.ReceiveReady += OnActorReady;
                 _outbound.ReceiveReady += OnOutboundReady;
                 _poller = new NetMQPoller { _actor, _outbound };
+
+                if (_disposing)
+                {
+                    _poller.Stop();
+                    return;
+                }
+
                 _poller.Run();
             }
             catch (Exception error)
             {
-                _log.LogError($"TaskSchedulerJobCountSync poller thread terminated{System.Environment.NewLine}{error}");
+                if (!_disposing)
+                    _log.LogError($"TaskSchedulerJobCountSync poller thread terminated{System.Environment.NewLine}{error}");
             }
         }
 
@@ -253,6 +264,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 {
                     try
                     {
+                        _disposing = true;
                         _poller?.Stop();
                         if (_pollerThread != null && !_pollerThread.Join(TimeSpan.FromSeconds(5)))
                         {
