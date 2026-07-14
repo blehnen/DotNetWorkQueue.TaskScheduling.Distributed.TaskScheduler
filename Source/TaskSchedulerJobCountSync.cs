@@ -292,6 +292,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
+            System.GC.SuppressFinalize(this);
         }
         #endregion
     }
