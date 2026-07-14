@@ -71,7 +71,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             var myCount = Interlocked.Read(ref _currentTaskCount);
             var otherCount = _otherProcessorCounts.Values.Sum();
             var total = myCount + otherCount;
-            _log.LogDebug($"Total {total} = [M]{myCount}+[O]{otherCount}");
+            _log.LogDebug("Total {Total} = [M]{MyCount}+[O]{OtherCount}", total, myCount, otherCount);
             return total;
         }
 
@@ -148,7 +148,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             }
             catch (Exception error)
             {
-                _log.LogError($"A fatal error occurred while processing NetMCQ commands{System.Environment.NewLine}{error}");
+                _log.LogError(error, "A fatal error occurred while processing NetMQ commands");
             }
         }
 
@@ -173,7 +173,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             catch (Exception error)
             {
                 if (!_disposing)
-                    _log.LogError($"TaskSchedulerJobCountSync poller thread terminated{System.Environment.NewLine}{error}");
+                    _log.LogError(error, "TaskSchedulerJobCountSync poller thread terminated");
             }
         }
 
@@ -186,8 +186,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 {
                     // another node has let us know they are here
                     var fromHostAddress = _actor.ReceiveFrameString();
-                    var msg = fromHostAddress + " broadcasting";
-                    _log.LogDebug(msg);
+                    _log.LogDebug("{FromHostAddress} broadcasting", fromHostAddress);
 
                     // send back a welcome message via the Bus publisher
                     var reply = _hostAddress + " received";
@@ -196,7 +195,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 else if (message == TaskSchedulerBusCommands.AddedNode.ToString())
                 {
                     var addedAddress = _actor.ReceiveFrameString();
-                    _log.LogDebug($"Added node {addedAddress} to the Bus");
+                    _log.LogDebug("Added node {AddedAddress} to the Bus", addedAddress);
                 }
                 else if (message == TaskSchedulerBusCommands.RemovedNode.ToString())
                 {
@@ -204,7 +203,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                     var uri = new Uri(removedAddress);
                     long temp;
                     _otherProcessorCounts.TryRemove(uri.Port, out temp);
-                    _log.LogDebug($"Removed node {removedAddress} from the Bus; it's processing count was {temp}");
+                    _log.LogDebug("Removed node {RemovedAddress} from the Bus; it's processing count was {Count}", removedAddress, temp);
                     RemoteCountChanged?.Invoke(this, EventArgs.Empty);
                 }
                 else if (message == TaskSchedulerBusCommands.SetCount.ToString())
@@ -230,12 +229,12 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 else
                 {
                     //response to broadcast
-                    _log.LogDebug(message);
+                    _log.LogDebug("{Message}", message);
                 }
             }
             catch (Exception error)
             {
-                _log.LogError($"Failed to handle NetMCQ commands{System.Environment.NewLine}{error}");
+                _log.LogError(error, "Failed to handle NetMQ commands");
             }
         }
 
@@ -293,6 +292,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
+            System.GC.SuppressFinalize(this);
         }
         #endregion
     }
