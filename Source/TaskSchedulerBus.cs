@@ -90,21 +90,21 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
                 // we bind to a random port, we will later publish this port
                 // using the beacon
                 _randomPort = _subscriber.BindRandomPort("tcp://*");
-                _log.LogDebug($"Bus subscriber is bound to {_subscriber.Options.LastEndpoint}");
+                _log.LogDebug("Bus subscriber is bound to {Endpoint}", _subscriber.Options.LastEndpoint);
 
                 // listen to incoming messages from other publishers, forward them to the shim
                 _subscriber.ReceiveReady += OnSubscriberReady;
 
                 // configure the beacon to listen on the broadcast port
-                _log.LogDebug($"Beacon is being configured to UDP port {_broadcastPort} on interface '{_beaconInterface}'");
+                _log.LogDebug("Beacon is being configured to UDP port {BroadcastPort} on interface '{BeaconInterface}'", _broadcastPort, _beaconInterface);
                 _beacon.Configure(_broadcastPort, _beaconInterface);
 
                 // publishing the random port to all other nodes
-                _log.LogDebug($"Beacon is publishing the Bus subscriber port {_randomPort}");
+                _log.LogDebug("Beacon is publishing the Bus subscriber port {RandomPort}", _randomPort);
                 _beacon.Publish(_randomPort.ToString(), TimeSpan.FromSeconds(1));
 
                 // Subscribe to all beacon on the port
-                _log.LogDebug( $"Beacon is subscribing to all beacons on UDP port {_broadcastPort}");
+                _log.LogDebug("Beacon is subscribing to all beacons on UDP port {BroadcastPort}", _broadcastPort);
                 _beacon.Subscribe("");
 
                 // listen to incoming beacons
