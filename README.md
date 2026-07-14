@@ -3,6 +3,9 @@
 [![NuGet](https://img.shields.io/nuget/v/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.svg)](https://www.nuget.org/packages/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler)
 [![License](https://img.shields.io/badge/license-LGPL--2.1--or--later-blue.svg)](LICENSE)
 [![Build status](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/actions/workflows/ci.yml)
+[![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=blehnen_DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=blehnen_DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=blehnen_DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler&metric=bugs)](https://sonarcloud.io/summary/new_code?id=blehnen_DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=blehnen_DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=blehnen_DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler)
 
 A replacement `ATaskScheduler` for [DotNetWorkQueue](https://github.com/blehnen/DotNetWorkQueue) that coordinates worker thread pool counts across multiple processes on the same machine via a NetMQ P2P bus.
 
