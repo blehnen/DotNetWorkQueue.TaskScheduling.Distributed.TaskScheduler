@@ -148,7 +148,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             }
             catch (Exception error)
             {
-                _log.LogError(error, "A fatal error occurred while processing NetMCQ commands");
+                _log.LogError(error, "A fatal error occurred while processing NetMQ commands");
             }
         }
 
@@ -234,7 +234,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
             }
             catch (Exception error)
             {
-                _log.LogError(error, "Failed to handle NetMCQ commands");
+                _log.LogError(error, "Failed to handle NetMQ commands");
             }
         }
 
