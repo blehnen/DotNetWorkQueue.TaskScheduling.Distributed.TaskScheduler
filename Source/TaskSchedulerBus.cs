@@ -35,7 +35,6 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         private readonly TimeSpan _deadNodeTimeout = TimeSpan.FromSeconds(10);
         private readonly int _broadcastPort;
         private readonly string _beaconInterface;
-        private NetMQActor _actor;
         private PublisherSocket _publisher;
         private SubscriberSocket _subscriber;
         private NetMQBeacon _beacon;
@@ -63,8 +62,7 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         /// </summary>
         public NetMQActor Start()
         {
-            _actor = NetMQActor.Create(RunActor);
-            return _actor;
+            return NetMQActor.Create(RunActor);
         }
 
         /// <summary>
