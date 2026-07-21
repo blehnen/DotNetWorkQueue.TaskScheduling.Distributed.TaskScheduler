@@ -37,7 +37,7 @@
     <PackageReference Include="DotNetWorkQueue" Version="0.9.32" />
     <PackageReference Include="NetMQ" Version="4.0.2.2" />
     <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" /> <!-- pin to patch GHSA-g94r-2vxg-569j in transitive 1.14.0 from DotNetWorkQueue -->
-    <PackageReference Include="System.Security.Cryptography.Xml" Version="8.0.3" /> <!-- pin to patch GHSA-37gx-xxp4-5rgx / GHSA-w3x6-4m5h-cxqf in transitive 8.0.2 (NetMQ -> System.ServiceModel.Primitives) -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="9.0.18" /> <!-- pin to patch GHSA-37gx-xxp4-5rgx / GHSA-w3x6-4m5h-cxqf in transitive 8.0.2 (NetMQ -> System.ServiceModel.Primitives) -->
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.201" PrivateAssets="All" />
   </ItemGroup>
 
