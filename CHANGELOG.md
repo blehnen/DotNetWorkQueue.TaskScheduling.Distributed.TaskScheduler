@@ -1,5 +1,11 @@
 # Changelog
 
+### Unreleased
+
+* Bump `DotNetWorkQueue` dependency from 0.9.32 to 0.17.0 ([issue #18](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/issues/18))
+* Bump `Microsoft.SourceLink.GitHub` to 10.0.303; 10.0.201 pulled a `Microsoft.Build.Tasks.Git` with GHSA-23fw-v26w-5fgq, which failed the build
+* Drop the `OpenTelemetry.Api` pin. It existed to patch a vulnerable 1.14.0 that `DotNetWorkQueue` no longer brings; 1.16.0 now resolves transitively
+
 ### 0.5.0 2026-04-16
 
 * Fix: `RunPoller` start race on fast `Start()` → `Dispose()` cycles — add `volatile bool _disposing` flag checked before and after `NetMQPoller` construction to prevent orphan poller creation and suppress noisy `ObjectDisposedException` log (ISSUE-025)
