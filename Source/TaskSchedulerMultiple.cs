@@ -42,8 +42,8 @@ namespace DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
         public TaskSchedulerMultiple(ITaskSchedulerConfiguration configuration, IWaitForEventOrCancelThreadPool waitForFreeThread, IMetrics metrics,
             ITaskSchedulerJobCountSync jobCounter, TaskSchedulerMultipleConfiguration multipleConfiguration, ILogger log) : base(configuration, waitForFreeThread, metrics, log)
         {
-            Guard.NotNull(() => jobCounter, jobCounter);
-            Guard.NotNull(() => multipleConfiguration, multipleConfiguration);
+            Guard.NotNull(jobCounter);
+            Guard.NotNull(multipleConfiguration);
 
             _jobCount = jobCounter;
             MultipleConfiguration = multipleConfiguration;
