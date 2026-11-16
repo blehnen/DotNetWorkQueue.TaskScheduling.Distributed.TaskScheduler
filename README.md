@@ -30,7 +30,7 @@ Install-Package DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler
 Or as a `PackageReference`:
 
 ```xml
-<PackageReference Include="DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler" Version="0.5.0" />
+<PackageReference Include="DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler" Version="0.6.0" />
 ```
 
 ## Quick start
@@ -92,7 +92,7 @@ This issue affects Linux and WSL environments and was resolved in the default co
 
 - .NET 8 or .NET 10
 - Windows or Linux
-- [DotNetWorkQueue](https://github.com/blehnen/DotNetWorkQueue) 0.9.31 or newer (pulled in transitively)
+- [DotNetWorkQueue](https://github.com/blehnen/DotNetWorkQueue) 0.17.0 or newer (pulled in transitively)
 
 ## Third-party libraries
 
