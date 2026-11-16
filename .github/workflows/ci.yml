@@ -3,19 +3,21 @@ name: CI
 on:
   push:
     branches: [master]
-    tags: [ 'v*' ]
   pull_request:
     branches: [master]
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           dotnet-version: |
             8.0.x
@@ -32,36 +34,3 @@ jobs:
 
       - name: Test
         run: dotnet test "Source\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests\DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Tests.csproj" --no-build
-
-  publish:
-    name: Publish to NuGet
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
-
-      - name: Restore
-        run: dotnet restore Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.sln
-
-      - name: Pack
-        run: dotnet pack Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.csproj -c Release --no-restore
-
-      - name: Push nupkg to NuGet
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        run: dotnet nuget push "Source/bin/Release/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
-
-      - name: Push snupkg to NuGet
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        run: dotnet nuget push "Source/bin/Release/*.snupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
