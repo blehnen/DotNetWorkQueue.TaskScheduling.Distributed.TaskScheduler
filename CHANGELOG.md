@@ -1,8 +1,10 @@
 # Changelog
 
-### Unreleased
+### 0.6.0 2026-11-16
 
 * Bump `DotNetWorkQueue` dependency from 0.9.32 to 0.17.0 ([issue #18](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/issues/18))
+* Required for DotNetWorkQueue releases after 0.17.0, which remove the obsolete `Guard` expression overloads ([DotNetWorkQueue #418](https://github.com/blehnen/DotNetWorkQueue/issues/418)). 0.5.0 calls one, so it fails there with `MissingMethodException` when the container is built
+* Pin `System.Security.Cryptography.Xml` to 9.0.21 to patch GHSA-37gx-xxp4-5rgx and GHSA-w3x6-4m5h-cxqf in the version NetMQ brings in transitively
 * Bump `Microsoft.SourceLink.GitHub` to 10.0.303; 10.0.201 pulled a `Microsoft.Build.Tasks.Git` with GHSA-23fw-v26w-5fgq, which failed the build
 * Drop the `OpenTelemetry.Api` pin. It existed to patch a vulnerable 1.14.0 that `DotNetWorkQueue` no longer brings; 1.16.0 now resolves transitively
 
