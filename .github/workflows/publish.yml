@@ -1,0 +1,263 @@
+name: Publish
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Skip the push to NuGet.org (exercises verify-gate, build-pack and the NuGet OIDC exchange).'
+        type: boolean
+        default: true
+
+# One publish at a time across all refs, so two runs cannot race to push the same version.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+# Permissions are declared per job rather than at workflow level, so each job states
+# exactly what it needs (githubactions:S8264). Every job must set them: with no
+# workflow-level block, a job that sets none falls back to the repository default,
+# which may be broader than contents: read.
+#
+# Every action is pinned to a commit SHA. The publish job holds id-token: write, so a
+# moved tag on any action that runs before the OIDC exchange could mint a token under
+# the nuget.org trusted-publishing policy.
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+  PROJECT: Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.csproj
+
+jobs:
+  verify-gate:
+    name: Verify tag, version, and Jenkins status
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: read       # reads the Jenkins branch status on the tagged commit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0          # full history and branches, for the master-ancestry check
+          persist-credentials: false
+
+      # A real publish must come from a release tag, so the tag checks below always
+      # run before anything is pushed. Dry runs may use any ref.
+      - name: Require a tag ref for a real publish
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == false && github.ref_type != 'tag'
+        run: |
+          echo "::error::A publish with dry_run=false must be dispatched on a v* tag, not '${GITHUB_REF_NAME}'"
+          exit 1
+
+      - name: Tag regex (tag refs only)
+        if: github.ref_type == 'tag'
+        run: |
+          set -euo pipefail
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9\.-]+)?$ ]]; then
+            echo "::error::Tag '${GITHUB_REF_NAME}' does not match ^v[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9\\.-]+)?\\$"
+            exit 1
+          fi
+          echo "Tag '${GITHUB_REF_NAME}' matches regex."
+
+      - name: Tag-version match (tag refs only)
+        if: github.ref_type == 'tag'
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PROJ_VERSION=$(grep -oP '(?<=<Version>)[^<]+' "${PROJECT}")
+          if [[ "${TAG_VERSION}" != "${PROJ_VERSION}" ]]; then
+            echo "::error::Tag '${TAG_VERSION}' does not match ${PROJECT} '<Version>${PROJ_VERSION}</Version>'"
+            exit 1
+          fi
+          echo "Tag version '${TAG_VERSION}' matches ${PROJECT}."
+
+      - name: Tagged commit is on master (tag refs only)
+        if: github.ref_type == 'tag'
+        run: |
+          set -euo pipefail
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/master; then
+            echo "::error::Tagged commit ${GITHUB_SHA} is not reachable from master"
+            exit 1
+          fi
+          echo "Tagged commit ${GITHUB_SHA} is on master."
+
+      - name: Jenkins gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          state=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/status" \
+            --jq '.statuses[] | select(.context=="continuous-integration/jenkins/branch") | .state')
+          if [[ "${state}" != "success" ]]; then
+            echo "::error::Jenkins status on ${GITHUB_SHA} is '${state:-missing}'; required 'success'"
+            exit 1
+          fi
+          echo "Jenkins 'continuous-integration/jenkins/branch' status is 'success' on ${GITHUB_SHA}."
+
+  build-pack:
+    name: Build, pack, and upload NuGet packages
+    needs: verify-gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore "${PROJECT}"
+
+      - name: Build
+        run: dotnet build "${PROJECT}" -c Release -p:CI=true --no-restore
+
+      - name: Pack
+        run: dotnet pack "${PROJECT}" -c Release -p:CI=true --no-build -o deploy/
+
+      - name: Assert package counts (1 nupkg + 1 snupkg)
+        run: |
+          set -euo pipefail
+          nupkg_count=$(ls deploy/*.nupkg 2>/dev/null | wc -l)
+          snupkg_count=$(ls deploy/*.snupkg 2>/dev/null | wc -l)
+          echo "nupkg_count=${nupkg_count} snupkg_count=${snupkg_count}"
+          if [[ "${nupkg_count}" -ne 1 || "${snupkg_count}" -ne 1 ]]; then
+            echo "::error::Expected 1 .nupkg and 1 .snupkg in deploy/, got ${nupkg_count} and ${snupkg_count}"
+            ls -la deploy/ || true
+            exit 1
+          fi
+
+      - name: Job summary
+        run: |
+          {
+            echo "## Build-pack summary"
+            echo ""
+            echo "- Ref: ${GITHUB_REF_NAME}"
+            echo "- SHA: ${GITHUB_SHA}"
+            echo ""
+            echo "### Packed files"
+            echo ""
+            echo '```'
+            ls -la deploy/
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: nuget-packages
+          path: deploy/*
+          retention-days: 90
+          if-no-files-found: error
+
+  # A dry run skips the publish job, so without this nothing would exercise the
+  # OIDC exchange until a real tag, the worst moment to find out the policy names
+  # the wrong workflow, the profile name is wrong, or id-token is missing.
+  # This proves the exchange and the repository/workflow policy. It cannot prove
+  # the package-ID scope of the policy: only an actual push tests that.
+  verify-trusted-publishing:
+    name: Verify the NuGet OIDC exchange (dry run only)
+    needs: verify-gate
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: NuGet login (OIDC exchange for a short-lived key)
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: blehnen
+
+      - name: Report
+        env:
+          MINTED: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          if [ -z "$MINTED" ]; then
+            echo "OIDC exchange produced no key" >&2
+            exit 1
+          fi
+          {
+            echo "## Trusted publishing"
+            echo ""
+            echo "- OIDC exchange succeeded; a short-lived key was issued"
+            echo "- The policy's package scope is NOT proven by this job; only a real push tests that"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: Push to NuGet.org
+    needs: build-pack
+    if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+    runs-on: ubuntu-latest
+    # id-token: write lets the runner mint an OIDC token for the NuGet
+    # trusted-publishing exchange below. Without it the login step fails with a
+    # message that does not mention permissions.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: nuget-packages
+          path: deploy/
+
+      # Trusted publishing: swap the run's OIDC token for an API key that is valid
+      # for one hour and only for this repository and workflow. There is no durable
+      # credential to leak or rotate. Three things here are load-bearing:
+      #   - `user` is the nuget.org PROFILE name, not the account email
+      #   - the exchange happens immediately before the push; one OIDC token buys
+      #     exactly one key, so this step cannot be hoisted into another job
+      #   - the key reaches the push through `env:` rather than being interpolated
+      #     into the `run:` line, which is what Sonar githubactions:S7636 is about
+      # The nuget.org policy is registered against THIS workflow file (publish.yml).
+      # Moving the push to another workflow silently invalidates it. The policy must
+      # cover the package ID DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.
+      - name: NuGet login (OIDC exchange for a short-lived key)
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: blehnen
+
+      # The nupkg and snupkg pushes are deliberately split into two commands.
+      # The dotnet CLI's automatic matching of .snupkg alongside .nupkg is
+      # unreliable, and a split push makes it obvious which half failed.
+      # The ubuntu-latest runner has dotnet preinstalled, so no setup-dotnet is needed.
+      - name: Push .nupkg to NuGet.org
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          dotnet nuget push "deploy/*.nupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Push .snupkg to NuGet.org
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          dotnet nuget push "deploy/*.snupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Job summary
+        run: |
+          {
+            echo "## Publish summary"
+            echo ""
+            echo "- Ref: ${GITHUB_REF_NAME}"
+            echo "- SHA: ${GITHUB_SHA}"
+            echo "- NuGet feed: https://api.nuget.org/v3/index.json"
+            echo "- Package: https://www.nuget.org/packages/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler"
+          } >> "$GITHUB_STEP_SUMMARY"

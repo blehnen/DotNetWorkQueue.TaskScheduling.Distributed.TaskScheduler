@@ -27,6 +27,20 @@ dotnet test Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.Test
 
 Build settings: warnings are treated as errors (`TreatWarningsAsErrors`), and XML documentation is generated in both Debug and Release. CI runs on GitHub Actions (`.github/workflows/ci.yml`).
 
+## Releasing
+
+Packages are published to NuGet.org by `.github/workflows/publish.yml` using NuGet trusted publishing (OIDC). There is no API key secret; the workflow exchanges its OIDC token for a one-hour key via `NuGet/login`. The nuget.org trusted-publishing policy is tied to this repository and the `publish.yml` file name, so renaming the workflow or moving the push breaks it.
+
+1. Bump `<Version>` in `Source/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler.csproj` and add a `CHANGELOG.md` entry.
+2. Merge to `master` and wait for Jenkins (`continuous-integration/jenkins/branch`) to report `success` on the merge commit.
+3. Tag the merge commit and push the tag: `git tag v<version> && git push origin v<version>`.
+
+`publish.yml` then runs `verify-gate` (the tag matches `^v\d+\.\d+\.\d+(-suffix)?$` and equals the csproj `<Version>`, the tagged commit is reachable from `master`, and the Jenkins status on it is `success`), `build-pack` (Release pack with `-p:CI=true` into `deploy/`, expects 1 `.nupkg` + 1 `.snupkg`), and `publish` (pushes the `.nupkg` and `.snupkg` as separate commands with `--skip-duplicate`).
+
+Dry run: Actions → Publish → Run workflow → `dry_run=true`. This runs `verify-gate`, `build-pack` and `verify-trusted-publishing` (proves the OIDC exchange) and pushes nothing. A dispatch with `dry_run=false` must be run on a `v*` tag (it fails on a branch) and goes through the same tag checks as a tag push; use it to retry a failed publish.
+
+All actions in the workflows are pinned to commit SHAs; keep them pinned when updating.
+
 ## Architecture
 
 All source is in `Source/` under the single namespace `DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler`.
