@@ -10,8 +10,9 @@ on:
         type: boolean
         default: true
 
+# One publish at a time across all refs, so two runs cannot race to push the same version.
 concurrency:
-  group: publish-${{ github.ref }}
+  group: publish
   cancel-in-progress: false
 
 # Permissions are declared per job rather than at workflow level, so each job states
@@ -38,10 +39,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          fetch-depth: 0          # full history and branches, for the master-ancestry check
           persist-credentials: false
 
-      - name: Tag regex (push trigger only)
-        if: github.event_name == 'push'
+      # A real publish must come from a release tag, so the tag checks below always
+      # run before anything is pushed. Dry runs may use any ref.
+      - name: Require a tag ref for a real publish
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == false && github.ref_type != 'tag'
+        run: |
+          echo "::error::A publish with dry_run=false must be dispatched on a v* tag, not '${GITHUB_REF_NAME}'"
+          exit 1
+
+      - name: Tag regex (tag refs only)
+        if: github.ref_type == 'tag'
         run: |
           set -euo pipefail
           if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9\.-]+)?$ ]]; then
@@ -50,8 +60,8 @@ jobs:
           fi
           echo "Tag '${GITHUB_REF_NAME}' matches regex."
 
-      - name: Tag-version match (push trigger only)
-        if: github.event_name == 'push'
+      - name: Tag-version match (tag refs only)
+        if: github.ref_type == 'tag'
         run: |
           set -euo pipefail
           TAG_VERSION="${GITHUB_REF_NAME#v}"
@@ -62,18 +72,28 @@ jobs:
           fi
           echo "Tag version '${TAG_VERSION}' matches ${PROJECT}."
 
+      - name: Tagged commit is on master (tag refs only)
+        if: github.ref_type == 'tag'
+        run: |
+          set -euo pipefail
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/master; then
+            echo "::error::Tagged commit ${GITHUB_SHA} is not reachable from master"
+            exit 1
+          fi
+          echo "Tagged commit ${GITHUB_SHA} is on master."
+
       - name: Jenkins gate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          state=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/status" \
+          state=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/status" \
             --jq '.statuses[] | select(.context=="continuous-integration/jenkins/branch") | .state')
           if [[ "${state}" != "success" ]]; then
-            echo "::error::Jenkins status on ${{ github.sha }} is '${state:-missing}'; required 'success'"
+            echo "::error::Jenkins status on ${GITHUB_SHA} is '${state:-missing}'; required 'success'"
             exit 1
           fi
-          echo "Jenkins 'continuous-integration/jenkins/branch' status is 'success' on ${{ github.sha }}."
+          echo "Jenkins 'continuous-integration/jenkins/branch' status is 'success' on ${GITHUB_SHA}."
 
   build-pack:
     name: Build, pack, and upload NuGet packages
@@ -121,8 +141,8 @@ jobs:
           {
             echo "## Build-pack summary"
             echo ""
-            echo "- Ref: ${{ github.ref_name }}"
-            echo "- SHA: ${{ github.sha }}"
+            echo "- Ref: ${GITHUB_REF_NAME}"
+            echo "- SHA: ${GITHUB_SHA}"
             echo ""
             echo "### Packed files"
             echo ""
@@ -236,8 +256,8 @@ jobs:
           {
             echo "## Publish summary"
             echo ""
-            echo "- Ref: ${{ github.ref_name }}"
-            echo "- SHA: ${{ github.sha }}"
+            echo "- Ref: ${GITHUB_REF_NAME}"
+            echo "- SHA: ${GITHUB_SHA}"
             echo "- NuGet feed: https://api.nuget.org/v3/index.json"
             echo "- Package: https://www.nuget.org/packages/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler"
           } >> "$GITHUB_STEP_SUMMARY"

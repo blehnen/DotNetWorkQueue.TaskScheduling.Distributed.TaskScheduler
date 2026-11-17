@@ -35,9 +35,9 @@ Packages are published to NuGet.org by `.github/workflows/publish.yml` using NuG
 2. Merge to `master` and wait for Jenkins (`continuous-integration/jenkins/branch`) to report `success` on the merge commit.
 3. Tag the merge commit and push the tag: `git tag v<version> && git push origin v<version>`.
 
-`publish.yml` then runs `verify-gate` (the tag matches `^v\d+\.\d+\.\d+(-suffix)?$` and equals the csproj `<Version>`, and the Jenkins status on the tagged commit is `success`), `build-pack` (Release pack with `-p:CI=true` into `deploy/`, expects 1 `.nupkg` + 1 `.snupkg`), and `publish` (pushes the `.nupkg` and `.snupkg` as separate commands with `--skip-duplicate`).
+`publish.yml` then runs `verify-gate` (the tag matches `^v\d+\.\d+\.\d+(-suffix)?$` and equals the csproj `<Version>`, the tagged commit is reachable from `master`, and the Jenkins status on it is `success`), `build-pack` (Release pack with `-p:CI=true` into `deploy/`, expects 1 `.nupkg` + 1 `.snupkg`), and `publish` (pushes the `.nupkg` and `.snupkg` as separate commands with `--skip-duplicate`).
 
-Dry run: Actions → Publish → Run workflow → `dry_run=true`. This runs `verify-gate`, `build-pack` and `verify-trusted-publishing` (proves the OIDC exchange) and pushes nothing. Running it with `dry_run=false` publishes whatever version the selected branch's csproj holds, without the tag checks.
+Dry run: Actions → Publish → Run workflow → `dry_run=true`. This runs `verify-gate`, `build-pack` and `verify-trusted-publishing` (proves the OIDC exchange) and pushes nothing. A dispatch with `dry_run=false` must be run on a `v*` tag (it fails on a branch) and goes through the same tag checks as a tag push; use it to retry a failed publish.
 
 All actions in the workflows are pinned to commit SHAs; keep them pinned when updating.
 
