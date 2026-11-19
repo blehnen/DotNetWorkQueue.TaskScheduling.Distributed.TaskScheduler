@@ -1,5 +1,14 @@
 # Changelog
 
+### 0.7.0 2026-11-19
+
+* Bump `DotNetWorkQueue` dependency from 0.17.0 to 0.18.0. 0.18.0 has its own behavior changes, for example on async consumers retry rules now match the handler's own exception type. See its [changelog](https://github.com/blehnen/DotNetWorkQueue/blob/master/CHANGELOG.md)
+* Bump `NetMQ` from 4.0.2.2 to 4.0.4.5
+* Drop the `System.Security.Cryptography.Xml` pin. NetMQ 4.0.4.5 depends on 10.0.13 directly, which already has the GHSA-37gx-xxp4-5rgx and GHSA-w3x6-4m5h-cxqf fixes
+* Bump `Microsoft.SourceLink.GitHub` from 10.0.303 to 10.0.404. Stays on 10.x because 11.0.100 brings `System.IO.Hashing` 11.0.0, which warns that it does not support net8.0
+* Tests: bump `Microsoft.NET.Test.Sdk` to 18.*, `xunit.runner.visualstudio` to 4.*, `NSubstitute` to 6.* and `coverlet.collector` to 10.*
+* First release published by `.github/workflows/publish.yml` with NuGet trusted publishing ([issue #22](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/issues/22))
+
 ### 0.6.0 2026-11-16
 
 * Bump `DotNetWorkQueue` dependency from 0.9.32 to 0.17.0 ([issue #18](https://github.com/blehnen/DotNetWorkQueue.TaskScheduling.Distributed.TaskScheduler/issues/18))
